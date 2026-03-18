@@ -8,6 +8,25 @@ export interface DocSection {
   links: DocLink[]
 }
 
+/** Flatten the navigation tree into an ordered list of links. */
+export function flattenNavigation(): DocLink[] {
+  return navigation.flatMap((section) => section.links)
+}
+
+/** Get the previous and next doc links relative to a given href. */
+export function getPagerLinks(href: string): {
+  prev: DocLink | null
+  next: DocLink | null
+} {
+  const flat = flattenNavigation()
+  const index = flat.findIndex((link) => link.href === href)
+  if (index === -1) return { prev: null, next: null }
+  return {
+    prev: index > 0 ? flat[index - 1] : null,
+    next: index < flat.length - 1 ? flat[index + 1] : null,
+  }
+}
+
 export const navigation: DocSection[] = [
   {
     title: "Getting Started",
