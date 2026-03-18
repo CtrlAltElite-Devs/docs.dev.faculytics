@@ -26,6 +26,10 @@ export const metadata: Metadata = {
   },
   description:
     "Developer documentation for the Faculytics analytics platform.",
+  icons: {
+    icon: "/faculytics_logo.png",
+    apple: "/faculytics_logo.png",
+  },
 }
 
 export default function RootLayout({

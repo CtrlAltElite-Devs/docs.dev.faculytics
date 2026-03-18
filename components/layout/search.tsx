@@ -66,12 +66,21 @@ export function SearchButton() {
     <>
       <Button
         variant="outline"
-        className="relative h-8 w-full justify-start rounded-md text-sm text-muted-foreground sm:w-56"
+        size="icon"
+        className="h-8 w-8 shrink-0 sm:hidden"
+        onClick={() => setOpen(true)}
+      >
+        <Search className="h-3.5 w-3.5" />
+        <span className="sr-only">Search docs</span>
+      </Button>
+      <Button
+        variant="outline"
+        className="relative hidden h-8 w-56 justify-start rounded-md text-sm text-muted-foreground sm:inline-flex"
         onClick={() => setOpen(true)}
       >
         <Search className="mr-2 h-3.5 w-3.5" />
         Search docs...
-        <kbd className="pointer-events-none absolute right-1.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+        <kbd className="pointer-events-none absolute right-1.5 flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100">
           <span className="text-xs">⌘</span>K
         </kbd>
       </Button>
