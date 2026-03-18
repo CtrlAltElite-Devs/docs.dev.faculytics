@@ -49,7 +49,7 @@ export function Toc({ entries }: TocProps) {
             "block text-sm transition-colors",
             entry.depth === 3 && "pl-3",
             activeSlug === entry.slug
-              ? "font-medium text-foreground"
+              ? "font-medium text-brand-blue"
               : "text-muted-foreground hover:text-foreground"
           )}
         >

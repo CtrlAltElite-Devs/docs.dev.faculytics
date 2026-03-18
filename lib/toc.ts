@@ -14,7 +14,11 @@ export function extractToc(rawContent: string): TocEntry[] {
 
   while ((match = headingRegex.exec(rawContent)) !== null) {
     const depth = match[1].length
-    const title = match[2].replace(/\*\*(.+?)\*\*/g, "$1").replace(/`(.+?)`/g, "$1").trim()
+    const title = match[2]
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/\*\*(.+?)\*\*/g, "$1")
+      .replace(/`(.+?)`/g, "$1")
+      .trim()
     entries.push({
       title,
       slug: slugger.slug(title),

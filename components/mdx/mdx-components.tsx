@@ -16,7 +16,7 @@ function extractText(children: React.ReactNode): string {
 export const mdxComponents: MDXComponents = {
   h1: ({ children, ...props }) => (
     <h1
-      className="mt-2 scroll-m-20 text-3xl font-bold tracking-tight"
+      className="mt-2 scroll-m-20 font-playfair text-3xl font-bold tracking-tight"
       {...props}
     >
       {children}
@@ -24,7 +24,7 @@ export const mdxComponents: MDXComponents = {
   ),
   h2: ({ children, ...props }) => (
     <h2
-      className="mt-10 scroll-m-20 border-b pb-2 text-2xl font-semibold tracking-tight first:mt-0"
+      className="mt-10 scroll-m-20 font-playfair border-b border-brand-blue/20 pb-2 text-2xl font-semibold tracking-tight first:mt-0"
       {...props}
     >
       {children}
@@ -32,7 +32,7 @@ export const mdxComponents: MDXComponents = {
   ),
   h3: ({ children, ...props }) => (
     <h3
-      className="mt-8 scroll-m-20 text-xl font-semibold tracking-tight"
+      className="mt-8 scroll-m-20 font-playfair text-xl font-semibold tracking-tight"
       {...props}
     >
       {children}
@@ -40,7 +40,7 @@ export const mdxComponents: MDXComponents = {
   ),
   h4: ({ children, ...props }) => (
     <h4
-      className="mt-6 scroll-m-20 text-lg font-semibold tracking-tight"
+      className="mt-6 scroll-m-20 font-playfair text-lg font-semibold tracking-tight"
       {...props}
     >
       {children}
@@ -54,7 +54,7 @@ export const mdxComponents: MDXComponents = {
   a: ({ children, href, ...props }) => (
     <a
       href={href}
-      className="font-medium text-primary underline underline-offset-4"
+      className="font-medium text-brand-blue underline underline-offset-4 hover:text-brand-blue/80"
       {...props}
     >
       {children}
@@ -72,7 +72,7 @@ export const mdxComponents: MDXComponents = {
   ),
   blockquote: ({ children, ...props }) => (
     <blockquote
-      className="mt-6 border-l-2 pl-6 italic text-muted-foreground"
+      className="mt-6 border-l-2 border-brand-blue/40 pl-6 italic text-muted-foreground"
       {...props}
     >
       {children}
@@ -132,7 +132,7 @@ export const mdxComponents: MDXComponents = {
     if (isInline) {
       return (
         <code
-          className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm"
+          className="relative rounded bg-brand-blue/10 px-[0.3rem] py-[0.2rem] font-mono text-sm text-brand-blue"
           {...props}
         >
           {children}

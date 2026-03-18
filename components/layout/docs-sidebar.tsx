@@ -14,7 +14,7 @@ export function DocsSidebar() {
       <div className="space-y-6">
         {navigation.map((section) => (
           <div key={section.title}>
-            <h4 className="mb-1 px-2 text-sm font-semibold tracking-tight">
+            <h4 className="mb-1 px-2 text-sm font-semibold tracking-tight text-brand-blue">
               {section.title}
             </h4>
             <div className="space-y-0.5">
@@ -25,8 +25,8 @@ export function DocsSidebar() {
                   className={cn(
                     "block rounded-md px-2 py-1.5 text-sm transition-colors",
                     pathname === link.href
-                      ? "bg-accent font-medium text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                      ? "bg-brand-blue/10 font-medium text-brand-blue"
+                      : "text-muted-foreground hover:bg-brand-blue/5 hover:text-foreground"
                   )}
                 >
                   {link.title}

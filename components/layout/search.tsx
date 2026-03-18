@@ -97,7 +97,7 @@ export function SearchButton() {
                 results.map((result) => (
                   <button
                     key={result.href}
-                    className="flex w-full flex-col rounded-md px-3 py-2 text-left hover:bg-accent"
+                    className="flex w-full flex-col rounded-md px-3 py-2 text-left hover:bg-brand-blue/10"
                     onClick={() => handleSelect(result.href)}
                   >
                     <span className="text-sm font-medium">{result.title}</span>

@@ -84,7 +84,17 @@ export async function getDocBySlug(slug: string[]) {
         remarkPlugins: [remarkGfm, remarkMermaid],
         rehypePlugins: [
           rehypeSlug,
-          [rehypeAutolinkHeadings, { behavior: "wrap" }],
+          [
+            rehypeAutolinkHeadings,
+            {
+              behavior: "prepend",
+              properties: {
+                className: ["anchor-link"],
+                ariaHidden: true,
+                tabIndex: -1,
+              },
+            },
+          ],
           [
             rehypePrettyCode,
             {
