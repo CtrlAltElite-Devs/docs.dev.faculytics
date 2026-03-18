@@ -28,8 +28,13 @@ function buildIndex(): SearchResult[] {
   )
 }
 
-export function SearchButton() {
-  const [open, setOpen] = useState(false)
+function SearchDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
   const [query, setQuery] = useState("")
   const router = useRouter()
 
@@ -44,12 +49,85 @@ export function SearchButton() {
 
   const handleSelect = useCallback(
     (href: string) => {
-      setOpen(false)
+      onOpenChange(false)
       setQuery("")
       router.push(href)
     },
-    [router]
+    [router, onOpenChange]
   )
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="top-[20%] translate-y-0 gap-0 overflow-hidden border-border/50 bg-card p-0 shadow-xl">
+        <DialogTitle className="sr-only">Search documentation</DialogTitle>
+        <div className="flex items-center border-b border-border/50 px-4">
+          <Search className="mr-3 h-4 w-4 shrink-0 text-brand-blue" />
+          <Input
+            placeholder="Search documentation..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="flex h-12 w-full rounded-md border-0 bg-transparent py-3 text-sm shadow-none outline-none ring-0 placeholder:text-muted-foreground focus-visible:ring-0 dark:bg-transparent"
+          />
+        </div>
+        {query.trim() && (
+          <div className="max-h-[300px] overflow-y-auto p-2">
+            {results.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                No results found.
+              </p>
+            ) : (
+              results.map((result) => (
+                <button
+                  key={result.href}
+                  className="flex w-full flex-col rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-brand-blue/10"
+                  onClick={() => handleSelect(result.href)}
+                >
+                  <span className="text-sm font-medium">{result.title}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {result.section}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export function SearchIconButton() {
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault()
+        setOpen((prev) => !prev)
+      }
+    }
+    document.addEventListener("keydown", onKeyDown)
+    return () => document.removeEventListener("keydown", onKeyDown)
+  }, [])
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 shrink-0 text-muted-foreground"
+        onClick={() => setOpen(true)}
+      >
+        <Search className="h-4 w-4" />
+        <span className="sr-only">Search docs</span>
+      </Button>
+      <SearchDialog open={open} onOpenChange={setOpen} />
+    </>
+  )
+}
+
+export function SearchButton() {
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -75,42 +153,7 @@ export function SearchButton() {
           <span className="text-xs">⌘</span>K
         </kbd>
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="top-[20%] translate-y-0 gap-0 overflow-hidden p-0">
-          <DialogTitle className="sr-only">Search documentation</DialogTitle>
-          <div className="flex items-center border-b px-4">
-            <Search className="mr-3 h-4 w-4 shrink-0 text-brand-blue" />
-            <Input
-              placeholder="Search documentation..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="flex h-12 w-full rounded-md border-0 bg-transparent py-3 text-sm shadow-none outline-none ring-0 placeholder:text-muted-foreground focus-visible:ring-0"
-            />
-          </div>
-          {query.trim() && (
-            <div className="max-h-[300px] overflow-y-auto p-2">
-              {results.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">
-                  No results found.
-                </p>
-              ) : (
-                results.map((result) => (
-                  <button
-                    key={result.href}
-                    className="flex w-full flex-col rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-brand-blue/10"
-                    onClick={() => handleSelect(result.href)}
-                  >
-                    <span className="text-sm font-medium">{result.title}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {result.section}
-                    </span>
-                  </button>
-                ))
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <SearchDialog open={open} onOpenChange={setOpen} />
     </>
   )
 }
