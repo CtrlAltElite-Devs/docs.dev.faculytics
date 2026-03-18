@@ -1,0 +1,92 @@
+---
+title: Getting Started
+description: Local development setup for all Faculytics projects.
+---
+
+## Prerequisites
+
+- **Node.js** 20+ and **npm** (for `api.faculytics`)
+- **Bun** (for `app.faculytics` and `docs.dev.faculytics`)
+- **Python 3.11+** and **uv** (for `embedding.worker.faculytics`)
+- **Rust** toolchain (for `scripts/moodle_course_builder`)
+- **Docker** and **Docker Compose** (for Redis and mock workers)
+- **PostgreSQL** 15+ with pgvector extension
+
+## Repository Structure
+
+This is a monorepo-style workspace with independent projects:
+
+| Project | Tech | Purpose |
+|---|---|---|
+| `api.faculytics` | NestJS, MikroORM, PostgreSQL, BullMQ/Redis | Backend API |
+| `app.faculytics` | Next.js 16, React 19, Bun | Frontend |
+| `embedding.worker.faculytics` | FastAPI, sentence-transformers, ONNX | Embedding worker |
+| `topic-modeling.faculytics` | Python, BERTopic | Topic modeling experiments |
+| `scripts/moodle_course_builder` | Rust | Moodle CSV generation CLI |
+
+## API (`api.faculytics`)
+
+```bash
+cd api.faculytics
+cp .env.sample .env        # Configure environment variables
+docker compose up -d        # Start Redis + mock worker
+npm install
+npx mikro-orm migration:up  # Apply database migrations
+npm run start:dev            # Start dev server (port 5200)
+```
+
+Key environment variables: `DATABASE_URL`, `MOODLE_BASE_URL`, `MOODLE_MASTER_KEY`, `JWT_SECRET`, `REFRESH_SECRET`, `REDIS_URL`.
+
+## Frontend (`app.faculytics`)
+
+```bash
+cd app.faculytics
+bun install
+bun run dev                  # Start dev server (port 3000)
+```
+
+Set `NEXT_PUBLIC_API_BASE_URL` to point to the API (defaults to `http://localhost:3000`).
+
+## Embedding Worker (`embedding.worker.faculytics`)
+
+```bash
+cd embedding.worker.faculytics
+uv sync
+uv run uvicorn src.main:app --reload
+```
+
+## Moodle Course Builder
+
+```bash
+cd scripts/moodle_course_builder
+cargo build --release
+cargo run -- --help
+```
+
+## Running Tests
+
+```bash
+# API
+cd api.faculytics && npm run test
+
+# Embedding worker
+cd embedding.worker.faculytics && uv run pytest
+
+# Frontend type check
+cd app.faculytics && npx tsc --noEmit
+```
+
+## Commit Conventions
+
+All commits follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+- `feat:` — New feature
+- `fix:` — Bug fix
+- `refactor:` — Code restructuring
+- `chore:` — Maintenance tasks
+- `docs:` — Documentation changes
+
+## Branching
+
+- `develop` — Integration branch
+- `staging` — Pre-production validation (receives cherry-picks from develop)

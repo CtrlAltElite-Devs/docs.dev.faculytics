@@ -1,0 +1,65 @@
+---
+title: Frontend Conventions
+description: Naming conventions, import rules, quality gates, and hard architectural constraints.
+---
+
+This page extracts the key conventions and rules from the [Frontend Architecture](/docs/frontend/architecture) for quick reference.
+
+## Naming Conventions
+
+- Components: `PascalCase`
+- Hooks: `useXxx`
+- Request modules: `*.requests.ts`
+- Store files: `*-store.ts`
+- Feature folders: singular/plural based on the existing domain name and current usage
+- Use one feature folder per domain, not per file type
+
+## Import Rules
+
+### Allowed patterns
+
+- `@/features/questionnaires/hooks/use-questionnaire-types`
+- `@/features/auth/lib/role-route`
+- `@/components/ui/button`
+- `@/components/layout/app-sidebar`
+
+### Preferred rules
+
+- Default to `@/*` absolute imports for any import that crosses folders or feature boundaries
+- Import from `features/<feature>/...` for feature internals
+- Allow relative imports only for tightly colocated route-local files
+- Do not use deep relative imports like `../../../` across features
+- Keep external imports first, internal imports second
+
+## Barrel Export Rule
+
+`features/*/index.ts` is the feature's public export surface.
+
+Do:
+- Export stable shared entry points from it
+
+Do not:
+- Over-export everything blindly
+- Create name collisions between types and components
+- Rely on a barrel when a direct feature path is clearer
+
+## Quality Gates
+
+For architecture or file-structure changes:
+
+- Run `npx tsc --noEmit`
+- Run targeted ESLint for touched areas
+- Run `npm run lint` when practical
+- Manually verify the touched user flows
+
+## Hard Constraints
+
+These rules should be treated as architectural constraints, not suggestions.
+
+- Do not reintroduce root `hooks/<feature>/` folders for migrated features
+- Do not reintroduce root `network/requests/*` feature files
+- Do not reintroduce root `types/<feature>/` or `schemas/<feature>/` for migrated features
+- Do not keep feature-local code in `lib/` once a feature slice exists
+- Do not import feature request functions directly into shared shell components
+- Do not duplicate server state in Zustand
+- Do not mix product redesign with structural refactor in the same change unless explicitly planned

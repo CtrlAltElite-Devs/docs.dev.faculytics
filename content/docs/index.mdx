@@ -1,0 +1,41 @@
+---
+title: Introduction
+description: Developer documentation for the Faculytics analytics platform.
+---
+
+## What is Faculytics?
+
+Faculytics is an analytics platform for a Philippine university (University of Cebu) that integrates with Moodle LMS to collect and analyze student feedback. The feedback is multilingual (Cebuano, Tagalog, English, and code-switched). The system provisions Moodle at scale, ingests questionnaire responses, runs AI analysis (embeddings, sentiment, topic modeling), and surfaces results to faculty and deans.
+
+## Documentation Sections
+
+### [Architecture](/docs/architecture/overview)
+
+System overview, core components, data model, AI inference pipeline, caching, questionnaire management, and universal ingestion.
+
+### [Decisions](/docs/decisions)
+
+20 architectural decisions with rationale and trade-offs — from external ID stability to confidence-scored recommendations.
+
+### [Workflows](/docs/workflows/analysis-pipeline)
+
+Step-by-step flows for the analysis pipeline, job processing, authentication, institutional sync, and questionnaire submission.
+
+### [Worker Contracts](/docs/worker-contracts/overview)
+
+Typed HTTP contracts for sentiment analysis, topic modeling, and recommendation workers.
+
+### [Frontend](/docs/frontend/architecture)
+
+Feature-sliced frontend structure, folder ownership, data flow patterns, and coding conventions.
+
+### [Roadmap](/docs/roadmap)
+
+Development progress across five phases — from foundation through governance.
+
+## Quick Links
+
+- **Local dev setup** — [Getting Started](/docs/getting-started)
+- **How components connect** — [System Overview](/docs/architecture/overview)
+- **AI pipeline deep-dive** — [AI Inference Pipeline](/docs/architecture/ai-inference-pipeline)
+- **All 20 decisions** — [Architectural Decisions](/docs/decisions)

@@ -1,0 +1,24 @@
+---
+title: System Overview
+description: High-level architecture of the Faculytics platform showing how components connect.
+---
+
+## How the Stack Connects
+
+Faculytics is a monorepo-style workspace with independent projects that work together:
+
+| Project | Tech | Purpose |
+|---|---|---|
+| `api.faculytics` | NestJS, MikroORM, PostgreSQL, BullMQ/Redis | Backend API — auth, Moodle sync, questionnaire ingestion, analysis job dispatch |
+| `app.faculytics` | Next.js 16, React 19, Bun, Zustand, TanStack Query | Frontend — role-based dashboards for students, faculty, deans |
+| `embedding.worker.faculytics` | FastAPI, sentence-transformers, ONNX | HTTP worker producing LaBSE 768-dim embeddings |
+| `topic-modeling.faculytics` | Python, BERTopic, LaBSE, UMAP, HDBSCAN | Experimentation project for multilingual topic modeling pipeline |
+| `scripts/moodle_course_builder` | Rust, clap, csv | CLI tool for bulk-generating Moodle course/user/enrollment CSVs |
+
+## Data Flow
+
+1. **Frontend** (`app.faculytics`) talks to the **API** (`api.faculytics`) via Axios with JWT auth (access + refresh tokens stored in Zustand/localStorage)
+2. **API** syncs users, courses, categories, and enrollments from **Moodle** via cron jobs and the `MoodleClient`
+3. **API** dispatches analysis jobs (sentiment, embeddings, topic modeling) via **BullMQ queues on Redis** to external HTTP workers
+4. **Workers** (`embedding.worker.faculytics`, future `topic.worker.faculytics`) receive HTTP POST requests, process them, and return results. Domain errors return HTTP 200 with `status: "failed"` to avoid BullMQ retries; only unexpected failures return 5xx
+5. **Moodle course builder** (Rust CLI) is an offline tool for bulk-provisioning the Moodle instance from curriculum CSVs

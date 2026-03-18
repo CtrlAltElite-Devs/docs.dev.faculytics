@@ -1,0 +1,28 @@
+---
+title: Worker Contracts Overview
+description: How NestJS API communicates with external HTTP workers via typed Zod schemas.
+---
+
+Workers in Faculytics are **pure compute HTTP endpoints** -- they receive JSON input via POST and return JSON results. The NestJS API owns all database access, business logic, queuing, and retry logic. Workers never touch the database.
+
+## Contract Location
+
+Worker request/response shapes are defined as Zod schemas in `api.faculytics/src/modules/analysis/dto/`. When changing worker contracts, update both the worker implementation and the API DTOs.
+
+## Response Convention
+
+All workers use a common response envelope:
+
+- `status: "completed"` -- Success, results included
+- `status: "failed"` -- Domain error (bad input, model failure). Returns HTTP 200 to avoid BullMQ retries.
+- HTTP 5xx -- Unexpected failure. BullMQ will retry according to its retry policy.
+
+This distinction ensures that expected failures (bad text, empty corpus) don't waste retry budget, while transient infrastructure errors are automatically retried.
+
+## Active Workers
+
+| Worker | Platform | Queue | Contract |
+| --- | --- | --- | --- |
+| [Sentiment](/docs/worker-contracts/sentiment-worker) | RunPod (GPU) | `sentiment` | Batch -- items with text |
+| [Topic Modeling](/docs/worker-contracts/topic-modeling-worker) | RunPod (GPU) | `topic-model` | Batch -- items with text + embeddings |
+| [Recommendations](/docs/worker-contracts/recommendations) | In-process (OpenAI) | `recommendations` | Pipeline/run IDs only |
