@@ -90,7 +90,7 @@ export const mdxComponents: MDXComponents = {
     <thead className="border-b" {...props}>{children}</thead>
   ),
   tr: ({ children, ...props }) => (
-    <tr className="m-0 border-t p-0 even:bg-muted" {...props}>
+    <tr className="m-0 border-t p-0 even:bg-surface" {...props}>
       {children}
     </tr>
   ),

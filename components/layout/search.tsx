@@ -66,34 +66,25 @@ export function SearchButton() {
     <>
       <Button
         variant="outline"
-        size="icon"
-        className="h-8 w-8 shrink-0 sm:hidden"
+        className="relative h-8 w-full justify-start rounded-lg bg-surface-alt/50 text-sm text-muted-foreground shadow-none transition-colors hover:bg-surface-alt"
         onClick={() => setOpen(true)}
       >
-        <Search className="h-3.5 w-3.5" />
-        <span className="sr-only">Search docs</span>
-      </Button>
-      <Button
-        variant="outline"
-        className="relative hidden h-8 w-56 justify-start rounded-md text-sm text-muted-foreground sm:inline-flex"
-        onClick={() => setOpen(true)}
-      >
-        <Search className="mr-2 h-3.5 w-3.5" />
+        <Search className="mr-2 h-3.5 w-3.5 opacity-50" />
         Search docs...
-        <kbd className="pointer-events-none absolute right-1.5 flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100">
+        <kbd className="pointer-events-none absolute right-1.5 hidden h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
           <span className="text-xs">⌘</span>K
         </kbd>
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="top-[20%] translate-y-0 gap-0 p-0">
+        <DialogContent className="top-[20%] translate-y-0 gap-0 overflow-hidden p-0">
           <DialogTitle className="sr-only">Search documentation</DialogTitle>
-          <div className="flex items-center border-b px-3">
-            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+          <div className="flex items-center border-b px-4">
+            <Search className="mr-3 h-4 w-4 shrink-0 text-brand-blue" />
             <Input
               placeholder="Search documentation..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="flex h-11 w-full rounded-md border-0 bg-transparent py-3 text-sm shadow-none outline-none ring-0 placeholder:text-muted-foreground focus-visible:ring-0"
+              className="flex h-12 w-full rounded-md border-0 bg-transparent py-3 text-sm shadow-none outline-none ring-0 placeholder:text-muted-foreground focus-visible:ring-0"
             />
           </div>
           {query.trim() && (
@@ -106,7 +97,7 @@ export function SearchButton() {
                 results.map((result) => (
                   <button
                     key={result.href}
-                    className="flex w-full flex-col rounded-md px-3 py-2 text-left hover:bg-brand-blue/10"
+                    className="flex w-full flex-col rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-brand-blue/10"
                     onClick={() => handleSelect(result.href)}
                   >
                     <span className="text-sm font-medium">{result.title}</span>

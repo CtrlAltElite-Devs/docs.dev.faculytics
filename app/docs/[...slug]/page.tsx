@@ -33,18 +33,23 @@ export default async function DocPage({ params }: PageProps) {
 
   return (
     <div className="flex">
-      <article className="min-w-0 flex-1 px-8 py-6">
+      <article className="min-w-0 flex-1 px-6 py-10 sm:px-10 lg:px-16">
         <div className="prose prose-neutral dark:prose-invert mx-auto max-w-3xl">
-          <h1>{doc.meta.title}</h1>
-          {doc.meta.description && (
-            <p className="mt-2 text-lg text-muted-foreground">
-              {doc.meta.description}
-            </p>
-          )}
+          <div className="mb-8 not-prose">
+            <h1 className="font-playfair text-3xl font-bold tracking-tight sm:text-4xl">
+              {doc.meta.title}
+            </h1>
+            {doc.meta.description && (
+              <p className="mt-3 text-base leading-relaxed text-muted-foreground sm:text-lg">
+                {doc.meta.description}
+              </p>
+            )}
+            <div className="mt-6 h-px bg-gradient-to-r from-brand-blue/30 via-border to-transparent" />
+          </div>
           {doc.content}
         </div>
       </article>
-      <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-52 shrink-0 px-4 py-6 xl:block">
+      <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-56 shrink-0 py-10 pr-4 pl-2 xl:block">
         <Toc entries={toc} />
       </aside>
     </div>

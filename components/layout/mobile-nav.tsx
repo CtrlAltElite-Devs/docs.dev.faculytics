@@ -24,9 +24,9 @@ export function MobileNav() {
           <span className="sr-only">Toggle navigation</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-72 p-0">
+      <SheetContent side="left" className="w-72 bg-surface p-0">
         <SheetTitle className="sr-only">Navigation</SheetTitle>
-        <div className="px-4">
+        <div className="px-2">
           <DocsSidebar />
         </div>
       </SheetContent>

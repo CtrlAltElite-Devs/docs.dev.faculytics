@@ -39,23 +39,30 @@ export function Toc({ entries }: TocProps) {
   if (entries.length === 0) return null
 
   return (
-    <nav className="space-y-1">
-      <p className="mb-2 text-sm font-semibold">On this page</p>
-      {entries.map((entry) => (
-        <a
-          key={entry.slug}
-          href={`#${entry.slug}`}
-          className={cn(
-            "block text-sm transition-colors",
-            entry.depth === 3 && "pl-3",
-            activeSlug === entry.slug
-              ? "font-medium text-brand-blue"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          {entry.title}
-        </a>
-      ))}
+    <nav className="relative">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        On this page
+      </p>
+      <div className="relative border-l border-border/60">
+        {entries.map((entry) => {
+          const isActive = activeSlug === entry.slug
+          return (
+            <a
+              key={entry.slug}
+              href={`#${entry.slug}`}
+              className={cn(
+                "relative -ml-px block border-l-2 py-1 pl-3 text-[13px] transition-all duration-150",
+                entry.depth === 3 && "pl-6",
+                isActive
+                  ? "border-brand-blue font-medium text-brand-blue"
+                  : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
+              )}
+            >
+              {entry.title}
+            </a>
+          )
+        })}
+      </div>
     </nav>
   )
 }
