@@ -14,7 +14,7 @@ export default async function DocsIndex() {
   return (
     <div className="flex">
       <article className="min-w-0 flex-1 px-8 py-6">
-        <div className="prose prose-neutral dark:prose-invert max-w-3xl">
+        <div className="prose prose-neutral dark:prose-invert mx-auto max-w-3xl">
           {doc.content}
         </div>
       </article>

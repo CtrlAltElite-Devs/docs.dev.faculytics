@@ -34,7 +34,7 @@ export default async function DocPage({ params }: PageProps) {
   return (
     <div className="flex">
       <article className="min-w-0 flex-1 px-8 py-6">
-        <div className="prose prose-neutral dark:prose-invert max-w-3xl">
+        <div className="prose prose-neutral dark:prose-invert mx-auto max-w-3xl">
           <h1>{doc.meta.title}</h1>
           {doc.meta.description && (
             <p className="mt-2 text-lg text-muted-foreground">
