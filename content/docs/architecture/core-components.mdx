@@ -54,6 +54,9 @@ classDiagram
         ChatKitModule
         QuestionnaireModule
         AnalysisModule
+        DimensionsModule
+        FacultyModule
+        CurriculumModule
     }
 
     AppModule --> InfrastructureModules : "imports"
@@ -65,6 +68,8 @@ classDiagram
     EnrollmentsModule --> MoodleModule : "uses MoodleService"
     QuestionnaireModule --> CommonModule : "uses UnitOfWork"
     AnalysisModule --> BullModule : "uses BullMQ queues"
+    FacultyModule --> CommonModule : "uses ScopeResolverService"
+    CurriculumModule --> CommonModule : "uses ScopeResolverService"
 
     class AnalysisModule {
         +AnalysisService
@@ -245,6 +250,7 @@ When explicit filter params (`departmentId`, `programId`) are provided, they are
 | Module | Endpoints | Purpose |
 | --- | --- | --- |
 | `FacultyModule` | `GET /faculty` | Paginated faculty list with course assignments |
+| `FacultyModule` | `GET /faculty/:facultyId/submission-count` | Submission count for a faculty member per semester |
 | `CurriculumModule` | `GET /curriculum/departments`, `/programs`, `/courses` | Institutional hierarchy for filter dropdowns |
 
 Both modules import `CommonModule` (for `ScopeResolverService`) and `DataLoaderModule` (for `CurrentUserInterceptor` → `UserLoader`).

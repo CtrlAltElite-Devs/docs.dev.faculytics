@@ -1,0 +1,137 @@
+---
+title: Sentiment Worker Contract
+description: Full request/response schemas for the temporary OpenAI-based sentiment worker, including RunPod envelope format.
+---
+
+> **Status:** Live (temporary OpenAI implementation). When the fine-tuned model ships on RunPod, only `SENTIMENT_WORKER_URL` in the API changes — the envelope format is already compatible.
+
+**Source of Truth:** `src/sentiment/dto/sentiment-request.dto.ts` and `src/sentiment/dto/sentiment-response.dto.ts`
+
+## Endpoint
+
+`POST {SENTIMENT_WORKER_URL}/runsync`
+
+The worker simulates a RunPod serverless `/runsync` endpoint. The API sends a RunPod envelope and receives a RunPod-style response.
+
+## RunPod Envelope
+
+The API wraps the batch message inside an `input` field:
+
+```json
+{
+  "input": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "version": "1.0",
+    "type": "sentiment",
+    "items": [
+      {
+        "submissionId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "text": "The professor was very helpful and engaging."
+      },
+      {
+        "submissionId": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+        "text": "Too fast. Couldn't keep up."
+      }
+    ],
+    "metadata": {
+      "pipelineId": "p1p2p3p4-e5f6-7890-abcd-ef1234567890",
+      "runId": "r1r2r3r4-e5f6-7890-abcd-ef1234567890"
+    },
+    "publishedAt": "2026-03-13T10:00:00.000Z"
+  }
+}
+```
+
+## Request Fields
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `jobId` | UUID string | Yes | Unique job identifier assigned by BullMQ |
+| `version` | string | Yes | Contract version (e.g. `"1.0"`) |
+| `type` | string | Yes | Always `"sentiment"` for this worker |
+| `items` | array | Yes | Submissions to analyze |
+| `items[].submissionId` | string | Yes | Unique submission identifier |
+| `items[].text` | string (min 1) | Yes | Cleaned qualitative comment text |
+| `metadata.pipelineId` | string | Yes | Parent analysis pipeline ID |
+| `metadata.runId` | string | Yes | Current sentiment run ID |
+| `publishedAt` | ISO 8601 datetime | Yes | When the job was dispatched |
+
+The request schema uses `.passthrough()`, so extra fields from the `BatchAnalysisJobMessage` envelope are accepted but ignored.
+
+## Success Response
+
+```json
+{
+  "output": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "version": "1.0.0-openai",
+    "status": "completed",
+    "results": [
+      {
+        "submissionId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "positive": 0.85,
+        "neutral": 0.10,
+        "negative": 0.05
+      },
+      {
+        "submissionId": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+        "positive": 0.05,
+        "neutral": 0.15,
+        "negative": 0.80
+      }
+    ],
+    "completedAt": "2026-03-13T10:30:00.000Z"
+  }
+}
+```
+
+## Response Fields
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `jobId` | UUID string | Always | Echoes the input `jobId` |
+| `version` | string | Always | Worker version (e.g. `"1.0.0-openai"`) |
+| `status` | enum | Always | `"completed"` or `"failed"` |
+| `results` | array | On success | Per-submission sentiment scores |
+| `results[].submissionId` | string | Yes | Matches input `submissionId` |
+| `results[].positive` | number (0–1) | Yes | Positive sentiment score |
+| `results[].neutral` | number (0–1) | Yes | Neutral sentiment score |
+| `results[].negative` | number (0–1) | Yes | Negative sentiment score |
+| `error` | string | On failure | Error message when `status` is `"failed"` |
+| `completedAt` | ISO 8601 datetime | Always | Processing completion timestamp |
+
+Scores for each submission sum to approximately 1.0.
+
+## Failure Response (Domain Error)
+
+Domain errors return **HTTP 200** with `status: "failed"` to prevent BullMQ retries:
+
+```json
+{
+  "output": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "version": "1.0.0-openai",
+    "status": "failed",
+    "error": "Rate limit exceeded after 3 retry attempts",
+    "completedAt": "2026-03-13T10:30:00.000Z"
+  }
+}
+```
+
+Domain errors include:
+- OpenAI rate limit (after retry exhaustion)
+- OpenAI API errors (invalid request, authentication)
+- Empty or unparseable model response
+- Input validation failures
+
+## Infrastructure Errors
+
+Unexpected failures (network errors, unhandled exceptions) return **HTTP 500**, which triggers BullMQ retry logic on the API side.
+
+## Versioning
+
+The `version` field in responses tracks the worker implementation version (`WORKER_VERSION` env var). The current OpenAI-based worker uses `1.0.0-openai`. This value is stored on `SentimentRun.workerVersion` in the API for provenance tracking.
+
+## Health Check
+
+`GET /health` returns `{ "status": "ok" }` for liveness probes.

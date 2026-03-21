@@ -46,4 +46,4 @@ npx tsc --noEmit     # Type check
 
 ## Content Sync
 
-Source docs live in `api.faculytics/docs/` and `app.faculytics/docs/`. The docs site copies are adapted for MDX (frontmatter, internal links, component usage). Use `/sync-docs` to detect and fix content drift between the source and the docs site.
+Source docs live in `api.faculytics/docs/`, `app.faculytics/docs/`, `topic.worker.faculytics/docs/`, `sentiment.worker.temp.faculytics/docs/`, and `embedding.worker.faculytics/docs/`. The API and app sources are `.md` files adapted for MDX; the worker sources are already `.mdx` with frontmatter. Use `/sync-docs` to detect and fix content drift between the source and the docs site.
