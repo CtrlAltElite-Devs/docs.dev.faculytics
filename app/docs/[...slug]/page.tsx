@@ -51,7 +51,7 @@ export default async function DocPage({ params }: PageProps) {
           <DocPager href={`/docs/${slug.join("/")}`} />
         </div>
       </article>
-      <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-56 shrink-0 py-10 pr-4 pl-2 xl:block">
+      <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-56 shrink-0 overflow-y-auto py-10 pr-4 pl-2 xl:block">
         <Toc entries={toc} />
       </aside>
     </div>

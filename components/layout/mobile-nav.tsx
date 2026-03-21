@@ -27,7 +27,7 @@ export function MobileNav() {
       <SheetContent side="left" className="w-72 bg-surface p-0">
         <SheetTitle className="sr-only">Navigation</SheetTitle>
         <div className="px-2">
-          <DocsSidebar />
+          <DocsSidebar forceExpanded />
         </div>
       </SheetContent>
     </Sheet>
