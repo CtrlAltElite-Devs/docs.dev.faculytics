@@ -62,6 +62,7 @@ export const navigation: DocSection[] = [
       { title: "Caching", href: "/docs/architecture/caching" },
       { title: "Questionnaire Management", href: "/docs/architecture/questionnaire-management" },
       { title: "Universal Ingestion", href: "/docs/architecture/universal-ingestion" },
+      { title: "Analytics", href: "/docs/architecture/analytics" },
     ],
   },
   {
