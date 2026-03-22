@@ -17,11 +17,11 @@ export function CopyButton({ text }: { text: string }) {
     <Button
       variant="ghost"
       size="icon"
-      className="absolute top-2 right-2 h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
+      className="absolute top-2 right-2 h-7 w-7 scale-90 opacity-0 transition-[opacity,transform] duration-200 group-hover:scale-100 group-hover:opacity-100"
       onClick={handleCopy}
     >
       {copied ? (
-        <Check className="h-3.5 w-3.5 text-green-500" />
+        <Check className="h-3.5 w-3.5 text-green-500 animate-in zoom-in-50 duration-200" />
       ) : (
         <Copy className="h-3.5 w-3.5" />
       )}

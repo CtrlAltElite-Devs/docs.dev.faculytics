@@ -1,8 +1,17 @@
 import type { MDXComponents } from "mdx/types"
 import { cn } from "@/lib/utils"
+import { AnimateOnScroll } from "@/components/ui/animate-on-scroll"
 import { CopyButton } from "./copy-button"
-import { Callout } from "./callout"
+import { Callout as CalloutBase } from "./callout"
 import { Mermaid } from "./mermaid"
+
+function Callout(props: React.ComponentProps<typeof CalloutBase>) {
+  return (
+    <AnimateOnScroll animation="animate-slide-in-left">
+      <CalloutBase {...props} />
+    </AnimateOnScroll>
+  )
+}
 
 function extractText(children: React.ReactNode): string {
   if (typeof children === "string") return children
@@ -23,20 +32,24 @@ export const mdxComponents: MDXComponents = {
     </h1>
   ),
   h2: ({ children, ...props }) => (
-    <h2
-      className="mt-10 scroll-m-20 font-playfair border-b border-brand-blue/20 pb-2 text-2xl font-semibold tracking-tight first:mt-0"
-      {...props}
-    >
-      {children}
-    </h2>
+    <AnimateOnScroll>
+      <h2
+        className="mt-10 scroll-m-20 font-playfair border-b border-brand-blue/20 pb-2 text-2xl font-semibold tracking-tight first:mt-0"
+        {...props}
+      >
+        {children}
+      </h2>
+    </AnimateOnScroll>
   ),
   h3: ({ children, ...props }) => (
-    <h3
-      className="mt-8 scroll-m-20 font-playfair text-xl font-semibold tracking-tight"
-      {...props}
-    >
-      {children}
-    </h3>
+    <AnimateOnScroll>
+      <h3
+        className="mt-8 scroll-m-20 font-playfair text-xl font-semibold tracking-tight"
+        {...props}
+      >
+        {children}
+      </h3>
+    </AnimateOnScroll>
   ),
   h4: ({ children, ...props }) => (
     <h4
@@ -71,12 +84,14 @@ export const mdxComponents: MDXComponents = {
     </ol>
   ),
   blockquote: ({ children, ...props }) => (
-    <blockquote
-      className="mt-6 border-l-2 border-brand-blue/40 pl-6 italic text-muted-foreground"
-      {...props}
-    >
-      {children}
-    </blockquote>
+    <AnimateOnScroll>
+      <blockquote
+        className="mt-6 border-l-2 border-brand-blue/40 pl-6 italic text-muted-foreground"
+        {...props}
+      >
+        {children}
+      </blockquote>
+    </AnimateOnScroll>
   ),
   hr: (props) => <hr className="my-8" {...props} />,
   table: ({ children, ...props }) => (
@@ -113,18 +128,20 @@ export const mdxComponents: MDXComponents = {
   pre: ({ children, ...props }) => {
     const text = extractText(children)
     return (
-      <div className="group relative my-6">
-        <pre
-          className={cn(
-            "overflow-x-auto rounded-lg border bg-muted p-4 text-sm",
-            "[&>code]:bg-transparent [&>code]:p-0"
-          )}
-          {...props}
-        >
-          {children}
-        </pre>
-        <CopyButton text={text} />
-      </div>
+      <AnimateOnScroll>
+        <div className="group relative my-6 transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md">
+          <pre
+            className={cn(
+              "overflow-x-auto rounded-lg border bg-muted p-4 text-sm",
+              "[&>code]:bg-transparent [&>code]:p-0"
+            )}
+            {...props}
+          >
+            {children}
+          </pre>
+          <CopyButton text={text} />
+        </div>
+      </AnimateOnScroll>
     )
   },
   code: ({ children, ...props }) => {
@@ -132,7 +149,7 @@ export const mdxComponents: MDXComponents = {
     if (isInline) {
       return (
         <code
-          className="relative rounded bg-brand-blue/10 px-[0.3rem] py-[0.2rem] font-mono text-sm text-brand-blue"
+          className="relative rounded bg-brand-blue/10 px-[0.3rem] py-[0.2rem] font-mono text-sm text-brand-blue break-all"
           {...props}
         >
           {children}

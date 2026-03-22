@@ -52,7 +52,7 @@ export function Mermaid({ chart }: MermaidProps) {
   return (
     <div
       ref={containerRef}
-      className="my-6 flex justify-center overflow-x-auto [&>svg]:max-w-full"
+      className="my-6 flex justify-center overflow-x-auto animate-in fade-in duration-500 [&>svg]:max-w-full"
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   )

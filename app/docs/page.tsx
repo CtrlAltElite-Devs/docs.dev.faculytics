@@ -16,7 +16,9 @@ export default async function DocsIndex() {
     <div className="flex">
       <article className="min-w-0 flex-1 px-6 py-10 sm:px-10 lg:px-16">
         <div className="prose prose-neutral dark:prose-invert mx-auto max-w-3xl">
-          {doc.content}
+          <div className="animate-fade-in-subtle">
+            {doc.content}
+          </div>
           <DocPager href="/docs" />
         </div>
       </article>

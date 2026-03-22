@@ -16,10 +16,10 @@ export function DocPager({ href }: DocPagerProps) {
       {prev ? (
         <Link
           href={prev.href}
-          className="group flex flex-1 flex-col items-start gap-1 rounded-lg border border-border px-4 py-3 transition-colors hover:border-brand-blue/40 hover:bg-muted/50"
+          className="group flex flex-1 flex-col items-start gap-1 rounded-lg border border-border px-4 py-3 transition-[color,border-color,background-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-brand-blue/40 hover:bg-muted/50 hover:shadow-sm"
         >
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <ChevronLeft className="size-3" />
+            <ChevronLeft className="size-3 transition-transform duration-200 group-hover:-translate-x-0.5" />
             Previous
           </span>
           <span className="text-sm font-medium group-hover:text-brand-blue">
@@ -32,11 +32,11 @@ export function DocPager({ href }: DocPagerProps) {
       {next ? (
         <Link
           href={next.href}
-          className="group flex flex-1 flex-col items-end gap-1 rounded-lg border border-border px-4 py-3 transition-colors hover:border-brand-blue/40 hover:bg-muted/50"
+          className="group flex flex-1 flex-col items-end gap-1 rounded-lg border border-border px-4 py-3 transition-[color,border-color,background-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-brand-blue/40 hover:bg-muted/50 hover:shadow-sm"
         >
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             Next
-            <ChevronRight className="size-3" />
+            <ChevronRight className="size-3 transition-transform duration-200 group-hover:translate-x-0.5" />
           </span>
           <span className="text-sm font-medium group-hover:text-brand-blue">
             {next.title}

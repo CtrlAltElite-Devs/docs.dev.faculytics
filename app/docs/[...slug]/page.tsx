@@ -37,17 +37,19 @@ export default async function DocPage({ params }: PageProps) {
       <article className="min-w-0 flex-1 px-6 py-10 sm:px-10 lg:px-16">
         <div className="prose prose-neutral dark:prose-invert mx-auto max-w-3xl">
           <div className="mb-8 not-prose">
-            <h1 className="font-playfair text-3xl font-bold tracking-tight sm:text-4xl">
+            <h1 className="animate-fade-up font-playfair text-3xl font-bold tracking-tight sm:text-4xl">
               {doc.meta.title}
             </h1>
             {doc.meta.description && (
-              <p className="mt-3 text-base leading-relaxed text-muted-foreground sm:text-lg">
+              <p className="animate-fade-up [animation-delay:100ms] mt-3 text-base leading-relaxed text-muted-foreground sm:text-lg">
                 {doc.meta.description}
               </p>
             )}
-            <div className="mt-6 h-px bg-gradient-to-r from-brand-blue/30 via-border to-transparent" />
+            <div className="animate-fade-up [animation-delay:200ms] mt-6 h-px bg-gradient-to-r from-brand-blue/30 via-border to-transparent" />
           </div>
-          {doc.content}
+          <div className="animate-fade-in-subtle [animation-delay:300ms]">
+            {doc.content}
+          </div>
           <DocPager href={`/docs/${slug.join("/")}`} />
         </div>
       </article>

@@ -51,7 +51,7 @@ export function Toc({ entries }: TocProps) {
               key={entry.slug}
               href={`#${entry.slug}`}
               className={cn(
-                "relative -ml-px block border-l-2 py-1 pl-3 text-[13px] transition-all duration-150",
+                "relative -ml-px block border-l-2 py-1 pl-3 text-[13px] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
                 entry.depth === 3 && "pl-6",
                 isActive
                   ? "border-brand-blue font-medium text-brand-blue"

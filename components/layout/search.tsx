@@ -58,7 +58,7 @@ function SearchDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="top-[20%] translate-y-0 gap-0 overflow-hidden border-border/50 bg-card p-0 shadow-xl">
+      <DialogContent className="top-[20%] translate-y-0 gap-0 overflow-hidden border-border/50 bg-card p-0 shadow-xl data-[state=open]:slide-in-from-top-4 data-[state=closed]:slide-out-to-top-4">
         <DialogTitle className="sr-only">Search documentation</DialogTitle>
         <div className="flex items-center border-b border-border/50 px-4">
           <Search className="mr-3 h-4 w-4 shrink-0 text-brand-blue" />
@@ -79,7 +79,7 @@ function SearchDialog({
               results.map((result) => (
                 <button
                   key={result.href}
-                  className="flex w-full flex-col rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-brand-blue/10"
+                  className="search-result flex w-full flex-col rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-brand-blue/10"
                   onClick={() => handleSelect(result.href)}
                 >
                   <span className="text-sm font-medium">{result.title}</span>

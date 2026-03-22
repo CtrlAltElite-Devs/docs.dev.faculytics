@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -17,9 +18,23 @@ const quickNav = [
 
 export function DocsHeader() {
   const pathname = usePathname()
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 0)
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background">
+    <header
+      className={cn(
+        "sticky top-0 z-50 w-full border-b transition-[border-color,box-shadow,background-color] duration-200",
+        scrolled
+          ? "border-border/60 bg-background/95 shadow-sm backdrop-blur-md"
+          : "border-transparent bg-background/80 backdrop-blur-sm"
+      )}
+    >
       <div className="flex h-14 items-center gap-2 px-4 sm:gap-4 sm:px-6">
         <MobileNav />
         <Link

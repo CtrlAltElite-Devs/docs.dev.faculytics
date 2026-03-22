@@ -140,10 +140,10 @@ export function DocsSidebar({ forceExpanded }: DocsSidebarProps) {
                             key={link.href}
                             href={link.href}
                             className={cn(
-                              "block rounded-lg px-3 py-1.5 text-[13px] transition-all duration-150",
+                              "block rounded-lg py-1.5 text-[13px] transition-all duration-150",
                               isActive
-                                ? "bg-brand-blue/10 font-medium text-brand-blue"
-                                : "text-muted-foreground hover:bg-surface-alt hover:text-foreground"
+                                ? "border-l-2 border-brand-blue bg-brand-blue/10 pl-2.5 font-medium text-brand-blue"
+                                : "border-l-2 border-transparent pl-3 text-muted-foreground hover:border-border hover:bg-surface-alt hover:pl-4 hover:text-foreground"
                             )}
                           >
                             {link.title}

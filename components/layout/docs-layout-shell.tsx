@@ -10,7 +10,7 @@ export function SidebarAside() {
   return (
     <aside
       className={cn(
-        "sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 overflow-hidden bg-surface transition-[width] duration-200 ease-in-out lg:block",
+        "sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 overflow-hidden bg-surface transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:block",
         collapsed ? "w-14" : "w-64"
       )}
     >
