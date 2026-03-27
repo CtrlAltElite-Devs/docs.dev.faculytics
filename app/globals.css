@@ -207,6 +207,12 @@ h4:hover .anchor-link,
 .search-result:nth-child(5) { animation-delay: 120ms; }
 .search-result:nth-child(n+6) { animation-delay: 150ms; }
 
+/* Dot-grid background texture */
+.bg-dot-grid {
+  background-image: radial-gradient(circle, currentColor 0.75px, transparent 0.75px);
+  background-size: 20px 20px;
+}
+
 /* Reduced motion: respect user preference */
 @media (prefers-reduced-motion: reduce) {
   *,

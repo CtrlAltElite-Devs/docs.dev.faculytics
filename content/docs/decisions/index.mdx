@@ -1,6 +1,6 @@
 ---
 title: Architectural Decisions
-description: 28 key architectural decisions and their trade-offs.
+description: 33 key architectural decisions and their trade-offs.
 ---
 
 This document tracks key architectural decisions and patterns used in the `api.faculytics` project.
@@ -77,7 +77,7 @@ Analysis pipelines use a two-step creation flow: `CreatePipeline()` computes cov
 
 ## 13. Sentiment Gate for Topic Modeling
 
-Between sentiment analysis and topic modeling, a filtering gate excludes low-signal positive comments (< 10 words). Negative and neutral comments always pass because they contain the most actionable feedback.
+Between sentiment analysis and topic modeling, a filtering gate excludes low-signal positive comments (fewer than 10 words). Negative and neutral comments always pass because they contain the most actionable feedback.
 
 - **Rationale:** Short positive comments ("Great!", "Good job") add noise to topic modeling clusters without contributing meaningful themes. Removing them improves topic quality.
 - **Trade-off:** Some short but substantive positive feedback may be excluded. The 10-word threshold is configurable via `SENTIMENT_GATE.POSITIVE_MIN_WORD_COUNT`.
@@ -201,3 +201,48 @@ All BullMQ queue name strings (`'sentiment'`, `'embedding'`, `'moodle-sync'`, et
 
 - **Rationale:** Queue names appeared as string literals in `@Processor()` decorators, `@InjectQueue()` injections, `BullModule.registerQueue()` calls, `queue.add()` invocations, and test `getQueueToken()` calls — a single typo would cause silent runtime failures (unmatched processor, dead queue). Constants provide compile-time safety and single-source-of-truth.
 - **Trade-off:** Minor verbosity (`QueueName.SENTIMENT` vs `'sentiment'`). Acceptable for the safety guarantee.
+
+## 29. Materialized Views for Analytics Dashboards
+
+Faculty performance dashboards use PostgreSQL materialized views (`mv_faculty_semester_stats`, `mv_faculty_trends`) instead of live aggregation queries.
+
+- **Rationale:** Dashboard queries aggregate across submissions, sentiment results, topic assignments, and multiple pipeline runs. Live queries would require complex multi-table joins with `LATERAL` subqueries and window functions on every page load. Materialized views pre-compute these once and serve reads in constant time.
+- **Refresh strategy:** Views are refreshed asynchronously via a BullMQ job (`analytics-refresh`) triggered after each analysis pipeline completes. `REFRESH CONCURRENTLY` is used so reads are never blocked during refresh. A `system_config` row tracks `analytics_last_refreshed_at` for frontend staleness display.
+- **Dependency ordering:** `mv_faculty_trends` depends on `mv_faculty_semester_stats` (it reads from the stats view for linear regression). The refresh processor always refreshes stats first, then trends.
+- **Trade-off:** Data is eventually consistent -- dashboards may show stale results until the refresh job completes after a pipeline run. Acceptable because analysis pipelines run infrequently and the refresh is fast (seconds).
+
+## 30. Semester Code Parsing for Display Labels
+
+The Moodle category sync now parses semester codes (e.g., `S22526`) into human-readable `label` ("Semester 2") and `academicYear` ("2025-2026") fields on the `Semester` entity.
+
+- **Rationale:** Moodle's category naming convention encodes the semester number and academic year range in a compact code. Parsing at sync time avoids duplicating the regex in every consumer (frontend, analytics views, reports).
+- **Trade-off:** The parser is tightly coupled to the `S{semester}{startYear}{endYear}` convention. If the naming scheme changes, the regex must be updated. Semesters that don't match the pattern get `null` for both fields -- no data loss, just no enrichment.
+
+## 31. Moodle Groups as Institutional Sections
+
+Moodle course groups (e.g., BSCS-4A) are mapped to a local `Section` entity to represent institutional sections -- year-level and section subdivisions of students within a course.
+
+- **Design:** `Section` is a new entity with `moodleGroupId` (unique), `name`, `description`, and a `course` FK. `Enrollment` gains a nullable `section` FK. The unique constraint `(user, course)` on Enrollment is unchanged -- section is optional metadata.
+- **Sync integration:** The `core_enrol_get_enrolled_users` API already returns a `groups` array per user. The enrollment sync extracts groups, upserts Section entities, and assigns the first group to each enrollment. No additional API calls are needed for batch sync.
+- **Hydration integration:** The login hydration service makes two additional parallel API calls per course (`core_group_get_course_groups`, `core_group_get_course_user_groups`) alongside the existing role fetch. Sections are upserted and assigned within the same transaction.
+- **Naming:** The entity is called `Section` (domain language) rather than `MoodleGroup` (Moodle language), following the convention of `Course` (not `MoodleCourse`) and `Program` (not `MoodleCategory`).
+- **Trade-off:** Students with multiple groups in one course get assigned to the first group only (`groups[0]`). This matches the institutional use case (one section per student per course). Multi-group scenarios are not supported in the initial implementation.
+
+## 32. Institutional Role Source Field (Auto vs Manual)
+
+The `UserInstitutionalRole` entity gains a `source` field (`auto` | `manual`) to distinguish between roles detected during login hydration and roles assigned by an administrator.
+
+- **Problem:** The Moodle REST API cannot distinguish between a Dean (Manager at depth 3) and a Chairperson (manager-archetype role at depth 4) -- both grant the same `moodle/category:manage` capability, and category-level role assignments are not exposed in course-context API responses.
+- **Solution:** Auto-detection defaults to `CHAIRPERSON` at program level (depth 4) for any user with the capability. `DEAN` at department level (depth 3) is assigned manually via an admin endpoint (`POST /admin/institutional-roles`). Hydration only manages `source=auto` roles, leaving `source=manual` roles untouched across logins.
+- **Cleanup:** When a manual DEAN exists at a department, any CHAIRPERSON roles at child programs are automatically removed during hydration to prevent redundant roles.
+- **Trade-off:** Deans require a one-time manual promotion by an admin. This is accepted because Deans are fewer in number and the Moodle API provides no reliable way to auto-detect the distinction.
+
+## 33. Dynamic Sync Scheduling with SyncLog Observability
+
+The `MoodleSyncScheduler` was rewritten from a static `@Cron(CronExpression.EVERY_HOUR)` decorator to a dynamic `SchedulerRegistry`-based approach, paired with a `SyncLog` audit entity.
+
+- **Dynamic scheduling:** The scheduler implements `OnModuleInit` and registers a `CronJob` via `SchedulerRegistry` at startup. The interval resolves from DB (`SystemConfig`) > env var (`MOODLE_SYNC_INTERVAL_MINUTES`) > per-environment default (dev: 60 min, staging: 360 min, production: 180 min). Super admins can update the interval at runtime via `PUT /moodle/sync/schedule`, which persists to `SystemConfig` and replaces the running cron job.
+- **Minimum interval:** 30 minutes, enforced at the DTO validation layer (`@Min(30)`), the Zod env schema (`.min(30)`), and the DB resolution path (values below 30 are ignored).
+- **SyncLog entity:** Does not extend `CustomBaseEntity` (no `deletedAt` -- audit records are never soft-deleted). Stores per-phase `SyncPhaseResult` as JSONB (fetched, inserted, updated, deactivated, errors, durationMs). Insert vs update counts use a count-before/after strategy -- one extra `COUNT` query per phase, no per-record overhead.
+- **Soft-delete filter bypass:** Since `SyncLog` has no `deletedAt` column, MikroORM's global `softDelete` filter would fail at query time. Queries must use `filters: { softDelete: false }`. The `@Filter` decorator approach (`cond: {}, default: false`) was found to be insufficient at runtime.
+- **Trade-off:** Admin schedule changes don't survive process restarts unless persisted to the database (which they are, via `SystemConfig`). The scheduler reads from DB on init, so restarts pick up the latest admin-configured interval.

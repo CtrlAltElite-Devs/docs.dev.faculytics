@@ -35,6 +35,8 @@ export function DocsHeader() {
           : "border-transparent bg-background/80 backdrop-blur-sm"
       )}
     >
+      {/* Brand accent gradient */}
+      <div className="h-[2px] w-full bg-gradient-to-r from-brand-blue/80 via-brand-blue/40 to-transparent" />
       <div className="flex h-14 items-center gap-2 px-4 sm:gap-4 sm:px-6">
         <MobileNav />
         <Link

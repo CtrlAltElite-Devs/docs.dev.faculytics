@@ -131,6 +131,7 @@ export const navigation: DocSection[] = [
     links: [
       { title: "Architecture", href: "/docs/frontend/architecture" },
       { title: "Conventions", href: "/docs/frontend/conventions" },
+      { title: "Questionnaire Form Renderer", href: "/docs/frontend/questionnaire-form-renderer" },
     ],
   },
   {
