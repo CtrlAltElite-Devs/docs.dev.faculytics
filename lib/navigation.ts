@@ -10,6 +10,7 @@ import {
   Box,
   Layout,
   Map,
+  GraduationCap,
 } from "lucide-react"
 
 export interface DocLink {
@@ -63,6 +64,8 @@ export const navigation: DocSection[] = [
       { title: "Questionnaire Management", href: "/docs/architecture/questionnaire-management" },
       { title: "Universal Ingestion", href: "/docs/architecture/universal-ingestion" },
       { title: "Analytics", href: "/docs/architecture/analytics" },
+      { title: "Scope Resolution", href: "/docs/architecture/scope-resolution" },
+      { title: "Audit Trail", href: "/docs/architecture/audit-trail" },
     ],
   },
   {
@@ -81,6 +84,16 @@ export const navigation: DocSection[] = [
       { title: "Auth & Hydration", href: "/docs/workflows/auth-hydration" },
       { title: "Institutional Sync", href: "/docs/workflows/institutional-sync" },
       { title: "Questionnaire Submission", href: "/docs/workflows/questionnaire-submission" },
+      { title: "Report Generation", href: "/docs/workflows/report-generation" },
+      { title: "Dean Promotion", href: "/docs/workflows/dean-promotion" },
+    ],
+  },
+  {
+    title: "Moodle",
+    icon: GraduationCap,
+    links: [
+      { title: "Provisioning", href: "/docs/moodle/provisioning" },
+      { title: "API Function Index", href: "/docs/moodle/api-index" },
     ],
   },
   {

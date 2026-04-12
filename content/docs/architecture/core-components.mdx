@@ -24,6 +24,8 @@ This document describes the high-level components, technology stack, and module 
 - **Caching:** `@nestjs/cache-manager` with Redis (`@keyv/redis`)
 - **Job Queue:** BullMQ (`@nestjs/bullmq`) on Redis
 - **Health Checks:** `@nestjs/terminus` with custom indicators
+- **PDF Generation:** Puppeteer (headless Chrome) + Handlebars templates
+- **Object Storage:** Cloudflare R2 via `@aws-sdk/client-s3` with presigned URL downloads
 - **Validation:** Zod (Environment variables), class-validator (DTOs)
 
 ## 3. Module Architecture
@@ -58,6 +60,8 @@ classDiagram
         DimensionsModule
         FacultyModule
         CurriculumModule
+        AuditModule
+        ReportsModule
     }
 
     AppModule --> InfrastructureModules : "imports"
@@ -71,9 +75,14 @@ classDiagram
     QuestionnaireModule --> CommonModule : "uses UnitOfWork"
     AnalysisModule --> BullModule : "uses BullMQ queues"
     AnalyticsModule --> BullModule : "uses BullMQ queue"
+    AuditModule --> BullModule : "uses BullMQ queue"
+    AuthModule --> AuditModule : "uses AuditService"
     AnalyticsModule --> CommonModule : "uses ScopeResolverService"
     FacultyModule --> CommonModule : "uses ScopeResolverService"
     CurriculumModule --> CommonModule : "uses ScopeResolverService"
+    ReportsModule --> AnalyticsModule : "uses AnalyticsService"
+    ReportsModule --> CommonModule : "uses ScopeResolverService"
+    ReportsModule --> BullModule : "uses BullMQ queue"
 
     class AnalysisModule {
         +AnalysisService
@@ -121,6 +130,22 @@ classDiagram
         +IngestionEngine
         +IngestionMapperService
     }
+
+    class AuditModule {
+        <<Global>>
+        +AuditService
+        +AuditProcessor
+        +AuditInterceptor
+    }
+
+    class ReportsModule {
+        +ReportsService
+        +ReportsController
+        +ReportGenerationProcessor
+        +PdfService
+        +R2StorageService
+        +ReportCleanupJob
+    }
 ```
 
 ## 4. Login Strategy Pattern
@@ -145,19 +170,20 @@ Institutional sync (categories, courses, enrollments) uses a BullMQ-based compos
 | Component | Purpose |
 | --- | --- |
 | `MoodleStartupService` | Blocking startup orchestrator — categories always, courses/enrollments gated by env |
-| `MoodleSyncProcessor` | BullMQ processor — runs categories → courses → enrollments in sequence |
-| `MoodleSyncScheduler` | Hourly `@Cron` that enqueues a composite sync job (fixed `jobId` for deduplication) |
-| `MoodleSyncController` | `POST /moodle/sync` (manual trigger), `GET /moodle/sync/status` (queue state) |
+| `MoodleSyncProcessor` | BullMQ processor — runs categories → courses → enrollments; creates/updates `SyncLog` with per-phase metrics |
+| `MoodleSyncScheduler` | Dynamic `SchedulerRegistry`-based cron (env-aware, admin-configurable via `SystemConfig`) |
+| `MoodleSyncController` | Sync trigger, status, paginated history, schedule get/update — all SUPER_ADMIN only |
 
 Phase dependency: if categories fail, courses and enrollments are skipped. If courses fail, enrollments are skipped.
 
 ### Cron Jobs
 
-The only remaining cron job using the `BaseJob` pattern is in `src/crons/jobs/`:
+Cron jobs using the `BaseJob` pattern:
 
-| Job | Schedule | Purpose |
-| --- | --- | --- |
-| `RefreshTokenCleanupJob` | Every 12 hours | Purges refresh tokens older than 7 days |
+| Job | Schedule | Module | Purpose |
+| --- | --- | --- | --- |
+| `RefreshTokenCleanupJob` | Every 12 hours | `AllCronJobs` | Purges refresh tokens older than 7 days |
+| `ReportCleanupJob` | Daily at 3 AM | ReportsModule | Purges expired report jobs + R2 objects, orphaned waiting jobs |
 
 ## 6. Moodle Connectivity & Error Handling
 
@@ -208,7 +234,7 @@ Each stage has a corresponding `RunStatus` (`PENDING` → `PROCESSING` → `COMP
 
 ### Queue Architecture
 
-Six BullMQ queues with independent concurrency. Queue names are centralized in `src/configurations/common/queue-names.ts`.
+Eight BullMQ queues with independent concurrency. Queue names are centralized in `src/configurations/common/queue-names.ts`.
 
 | Queue | Processor | Concurrency Default | Module |
 | --- | --- | --- | --- |
@@ -218,6 +244,8 @@ Six BullMQ queues with independent concurrency. Queue names are centralized in `
 | `topic-model` | `TopicModelProcessor` | 1 | AnalysisModule |
 | `recommendations` | `RecommendationsProcessor` | 1 | AnalysisModule |
 | `analytics-refresh` | `AnalyticsRefreshProcessor` | 1 | AnalyticsModule |
+| `audit` | `AuditProcessor` | 1 | AuditModule |
+| `report-generation` | `ReportGenerationProcessor` | 2 | ReportsModule |
 
 ### REST Endpoints
 
@@ -238,6 +266,17 @@ See [Analytics Module](/docs/architecture/analytics) for full architecture.
 | GET | `/analytics/overview` | Department overview with per-faculty stats |
 | GET | `/analytics/attention` | Faculty flagged for review with attention flags |
 | GET | `/analytics/trends` | Faculty trend data with linear regression results |
+
+### Report Generation Endpoints
+
+See [Report Generation Workflow](/docs/workflows/report-generation) for the full async flow.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| POST | `/reports/generate` | Queue a single faculty evaluation PDF |
+| POST | `/reports/generate/batch` | Queue batch PDF generation (scope-filtered, throttled) |
+| GET | `/reports/status/:jobId` | Poll single report job status + download URL |
+| GET | `/reports/batch/:batchId` | Poll batch progress with paginated per-job details |
 
 **Resilience:** Exponential backoff retries, stall detection, graceful degradation when Redis is unavailable (`ServiceUnavailableException`), HTTP timeout via `AbortController`.
 
@@ -264,11 +303,15 @@ The `FacultyModule` and `CurriculumModule` use a shared role-based scoping patte
 Request → JwtAuthGuard → RolesGuard → CurrentUserInterceptor → CLS Store → ScopeResolverService
 ```
 
-1. `@UseJwtGuard(SUPER_ADMIN, DEAN)` validates JWT and checks role membership via `RolesGuard`
+1. `@UseJwtGuard(SUPER_ADMIN, DEAN, CHAIRPERSON)` validates JWT and checks role membership via `RolesGuard`
 2. `CurrentUserInterceptor` loads the full `User` entity via `UserLoader` and stores it in CLS (`CurrentUserService.set()`)
 3. `ScopeResolverService.ResolveDepartmentIds(semesterId)` reads the user from CLS and returns:
    - `null` — unrestricted (super admin)
    - `string[]` — department UUIDs the dean is assigned to for that semester
+   - `string[]` — department UUIDs derived from the chairperson's program assignments
+4. `ScopeResolverService.ResolveProgramIds(semesterId)` provides program-level granularity:
+   - `null` — unrestricted (super admin, dean)
+   - `string[]` — program UUIDs the chairperson is assigned to
 
 ### Filter Validation Cascade
 

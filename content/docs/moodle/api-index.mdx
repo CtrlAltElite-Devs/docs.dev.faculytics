@@ -1,0 +1,90 @@
+---
+title: "Moodle API Function Index"
+description: "Machine-readable index of Moodle Web Services functions — generated reference used by the /moodle-api-agent command for grep-based lookups."
+---
+
+The Moodle API function index is a **generated, grep-oriented reference** that catalogues every Moodle Web Services function available on the integration target. It is used by the `/moodle-api-agent` slash command inside `api.faculytics` and by engineers who need to locate the right `wsfunction` when wiring a new Moodle call.
+
+<Callout type="info">
+This page describes how the index is generated and consumed. The full 760-function dataset lives alongside the API source at `api.faculytics/docs/moodle/moodle_api_index.md` and is intended for programmatic `grep`, not page-by-page reading.
+</Callout>
+
+## What It Contains
+
+The index is a flat list of ~760 rows — one per Moodle Web Services function. Each row records:
+
+| Field | Description |
+| --- | --- |
+| `wsfunction` | The exact string passed to Moodle's `/webservice/rest/server.php?wsfunction=...` |
+| `description` | One-line summary from the upstream Moodle documentation |
+| `page` | Page number in the source PDF where the function is documented |
+| `params` | Parameter names with types (e.g., `courseid(int)`, `users[](username,firstname,lastname)`) |
+| `return_shape` | Response shape sketch (fields inside returned objects, arrays noted with `[]`) |
+| `ajax` | Whether the function is callable from the AJAX endpoint (`yes` / `no`) |
+
+Rows are pipe-delimited:
+
+```
+wsfunction | description | page | params | return_shape | ajax
+```
+
+## Source & Generation
+
+| Property | Value |
+| --- | --- |
+| Source PDF | `api.faculytics/docs/moodle/moodle_api_documentation.pdf` |
+| Generated file | `api.faculytics/docs/moodle/moodle_api_index.md` |
+| Last generation | 2026-03-24 |
+| Total functions | 760 |
+
+The index is regenerated when the upstream Moodle Web Services documentation changes (typically once per Moodle major-version bump). It is **not** authored by hand — edits to individual rows would be overwritten on the next regeneration.
+
+## How to Use It
+
+The index is shaped for `grep`-style lookups because it must answer "which Moodle function do I call for X?" quickly, without parsing a 1500-page PDF.
+
+### By component
+
+```bash
+grep "core_message" api.faculytics/docs/moodle/moodle_api_index.md
+grep "core_enrol" api.faculytics/docs/moodle/moodle_api_index.md
+grep "core_course" api.faculytics/docs/moodle/moodle_api_index.md
+```
+
+### By keyword or action
+
+```bash
+grep -i "send.*message" api.faculytics/docs/moodle/moodle_api_index.md
+grep -i "completion" api.faculytics/docs/moodle/moodle_api_index.md
+grep -i "enrol.*user" api.faculytics/docs/moodle/moodle_api_index.md
+```
+
+### From inside Claude Code
+
+The `/moodle-api-agent` slash command in `api.faculytics` wraps these greps behind a natural-language interface — ask it "which wsfunction creates a category?" and it searches the index for you.
+
+## Example Rows
+
+A handful of representative entries, formatted for readability:
+
+```
+core_course_create_categories | Create course categories | 412 | categories[](name,parent,idnumber,description,descriptionformat,theme) | [{id,name,idnumber,description,descriptionformat,parent,sortorder,coursecount,visible,visibleold,timemodified,depth,path,theme}] | yes
+
+core_course_create_courses | Create new courses | 419 | courses[](fullname,shortname,categoryid,idnumber,summary,...) | [{id,shortname}] | yes
+
+core_enrol_get_enrolled_users | Get enrolled users by course id | 665 | courseid(int), options[](name,value) | [{id,username,firstname,lastname,email,...,groups[]}] | yes
+
+core_user_create_users | Create users | 1188 | users[](username,password,createpassword,firstname,lastname,email,auth,...) | [{id,username}] | yes
+
+core_webservice_get_site_info | Return some site info / user info / list of available functions | 1321 | serviceshortnames[] | {sitename,username,firstname,lastname,fullname,lang,userid,siteurl,userpictureurl,functions[],downloadfiles,uploadfiles,release,version,mobilecssurl,advancedfeatures,usercanmanageownfiles,userquota,usermaxuploadfilesize,userhomepage,userprivateaccesskey,siteid,sitecalendartype,usercalendartype,userissiteadmin,theme,limitconcurrentlogins} | yes
+```
+
+These five rows illustrate the patterns you'll see across the full index: list-endpoint `get_*` functions return arrays of objects, write-endpoint `create_*` functions return minimal identifiers, and the service-discovery `core_webservice_get_site_info` is the go-to probe for "what can I actually call on this Moodle instance?".
+
+## Using Functions from `api.faculytics`
+
+All Moodle calls inside `api.faculytics` go through `MoodleClient` (see [Core Components](/docs/architecture/core-components#6-moodle-connectivity--error-handling) for the connectivity and error-handling pattern). When adding a new call:
+
+1. Grep the index to confirm the `wsfunction` name and parameter shape.
+2. Add a typed wrapper to the relevant service (`MoodleService`, `MoodleProvisioningService`, etc.).
+3. On a fresh Moodle instance, the function must be added to the external service whitelist — `MoodleClient` surfaces a dedicated error hint for `webservice_access_exception` that explicitly names the Site Admin path to fix this.
