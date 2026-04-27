@@ -155,11 +155,11 @@ For development and staging, `AdminGenerateController` (mounted at `/admin/gener
 
 ### Endpoints
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | `/admin/generate-submissions/status` | Reports `{ totalEnrolled, alreadySubmitted, availableStudents }` for a target `versionId + facultyUsername + courseShortname` |
-| POST | `/admin/generate-submissions/preview` | Builds a preview of generated rows (questions + Likert answers + optional LLM comments) without persisting |
-| POST | `/admin/generate-submissions/commit` | Persists up to 200 rows at a time via the real submission service path |
+| Method | Path                                  | Purpose                                                                                                                       |
+| ------ | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/admin/generate-submissions/status`  | Reports `{ totalEnrolled, alreadySubmitted, availableStudents }` for a target `versionId + facultyUsername + courseShortname` |
+| POST   | `/admin/generate-submissions/preview` | Builds a preview of generated rows (questions + Likert answers + optional LLM comments) without persisting                    |
+| POST   | `/admin/generate-submissions/commit`  | Persists up to 200 rows at a time via the real submission service path                                                        |
 
 Selection uses one of two filter flows supported by new routes on `AdminFiltersController`:
 

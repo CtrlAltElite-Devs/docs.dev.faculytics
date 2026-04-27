@@ -11,7 +11,7 @@ description: Feature-sliced frontend structure, folder ownership, data flow patt
 
 ## 1. Purpose
 
-This document is the **authoritative source of truth** for how the frontend is organized. Every rule here is mandatory -- not a suggestion.
+This document is the **authoritative source of truth** for how the frontend is organized. Every rule here is mandatory — not a suggestion.
 
 It defines:
 
@@ -21,7 +21,7 @@ It defines:
 - the rules for adding new code
 - the boundaries that MUST NOT be crossed
 
-All contributors -- human and AI -- MUST follow these rules. If a rule blocks progress, update this document first and explain why.
+All contributors — human and AI — MUST follow these rules. If a rule blocks progress, update this document first and explain why.
 
 ---
 
@@ -81,7 +81,7 @@ The hook MUST return a clear result shape (prefer discriminated unions for multi
 
 ### MUST
 
-- Keep `components/ui/` generic -- no domain knowledge
+- Keep `components/ui/` generic — no domain knowledge
 - Keep feature UI inside its feature slice (`features/<feature>/components/`)
 - Keep route-only UI in `_components/` near its route
 - Let components own the interaction state they directly render
@@ -110,7 +110,7 @@ The hook MUST return a clear result shape (prefer discriminated unions for multi
 
 - Put React Query logic directly in page files when the hook is reusable
 - Mix transport logic directly into route components
-- Include unstable objects (mutation instances, inline objects) in `useCallback` dependency arrays -- use refs instead
+- Include unstable objects (mutation instances, inline objects) in `useCallback` dependency arrays — use refs instead
 
 ---
 
@@ -147,10 +147,10 @@ The hook MUST return a clear result shape (prefer discriminated unions for multi
 
 ### State placement decision order
 
-1. Only this component uses it -- component-local `useState`/`useReducer`
-2. Multiple components in one route need it -- lift to nearest shared parent or route-local context
-3. Multiple routes need client state -- `stores/` (Zustand)
-4. It comes from the server -- React Query (feature hook)
+1. Only this component uses it → component-local `useState`/`useReducer`
+2. Multiple components in one route need it → lift to nearest shared parent or route-local context
+3. Multiple routes need client state → `stores/` (Zustand)
+4. It comes from the server → React Query (feature hook)
 
 ---
 
@@ -168,7 +168,7 @@ features/<feature>/
   schemas/       # Zod schemas
   store/         # Feature-local Zustand store
   types/         # Feature types and DTOs
-  index.ts       # Barrel -- public export surface
+  index.ts       # Barrel — public export surface
 ```
 
 Not every feature needs every folder.
@@ -383,7 +383,7 @@ These are **non-negotiable**. Breaking them is a blocking code review issue.
 5. MUST NOT import feature request functions directly into shared shell components
 6. MUST NOT duplicate server state in Zustand
 7. MUST NOT mix product redesign with structural refactor in the same change unless explicitly planned
-8. MUST NOT let page files grow into orchestration-heavy components -- extract hooks
+8. MUST NOT let page files grow into orchestration-heavy components — extract hooks
 9. MUST NOT add React imports to request modules
 10. MUST NOT put component-local state in pages unless it controls route flow
 
@@ -393,15 +393,15 @@ These are **non-negotiable**. Breaking them is a blocking code review issue.
 
 Follow this decision order strictly:
 
-1. **Route file, guard, or route-only component?** -- `app/`
-2. **Generic UI primitive?** -- `components/ui/`
-3. **App shell?** -- `components/layout/`
-4. **Reusable app-specific composed component?** -- `components/shared/`
-5. **Feature-specific?** -- `features/<feature>/`
-6. **Shared pure helper with no feature ownership?** -- `lib/`
-7. **App-global client state?** -- `stores/`
+1. **Route file, guard, or route-only component?** → `app/`
+2. **Generic UI primitive?** → `components/ui/`
+3. **App shell?** → `components/layout/`
+4. **Reusable app-specific composed component?** → `components/shared/`
+5. **Feature-specific?** → `features/<feature>/`
+6. **Shared pure helper with no feature ownership?** → `lib/`
+7. **App-global client state?** → `stores/`
 
-If used by exactly one route -- prefer route-local `_components/` before creating a shared home.
+If used by exactly one route → prefer route-local `_components/` before creating a shared home.
 
 ---
 
@@ -437,25 +437,25 @@ Refactoring MUST NOT introduce breaking changes. Every refactor MUST preserve ex
 
 ### Before refactoring
 
-1. **Audit the existing flow** -- read the full component/hook and list every data dependency, guard condition, side effect, and prop being passed
-2. **Identify the public contract** -- what props does the component accept? What does the hook return? What callbacks fire and with what arguments?
+1. **Audit the existing flow** — read the full component/hook and list every data dependency, guard condition, side effect, and prop being passed
+2. **Identify the public contract** — what props does the component accept? What does the hook return? What callbacks fire and with what arguments?
 
 ### During refactoring
 
-1. MUST preserve the exact same guard order (loading -- error -- edge cases -- ready)
+1. MUST preserve the exact same guard order (loading → error → edge cases → ready)
 2. MUST preserve every prop/context being passed to child components (e.g., a shell showing course info during loading states)
 3. MUST NOT silently drop data from payloads (e.g., removing `courseId` from a submit payload)
 4. MUST NOT change the shape of return types in ways that lose information (e.g., a loading state that previously carried context MUST still carry context)
-5. MUST NOT change query keys, `enabled` conditions, or query dependency chains -- these control when and whether data fetches happen
-6. MUST NOT reorder hooks or add conditional hook calls -- this breaks React's rules of hooks
+5. MUST NOT change query keys, `enabled` conditions, or query dependency chains — these control when and whether data fetches happen
+6. MUST NOT reorder hooks or add conditional hook calls — this breaks React's rules of hooks
 
 ### After refactoring
 
 1. MUST pass `bun run typecheck`
-2. MUST compare the before/after for every render path and confirm identical behavior
+2. MUST manually compare the before/after for every render path and confirm identical behavior
 3. MUST verify that every API call sends the same payload shape as before
 
-If a refactor intentionally changes behavior, it is not a refactor -- it is a feature change. Label it as such in the commit message.
+If a refactor intentionally changes behavior, it is not a refactor — it is a feature change. Label it as such in the commit message.
 
 ---
 

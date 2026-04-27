@@ -35,19 +35,19 @@ description: BERTopic-based topic discovery contract with embeddings, hyperparam
 
 ### Fields
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `items` | array | Yes | Filtered submissions (post sentiment gate) |
-| `items[].submissionId` | string | Yes | Unique submission identifier |
-| `items[].text` | string (min 1) | Yes | Qualitative comment text |
-| `items[].embedding` | number[768] | Yes | LaBSE 768-dim embedding vector |
-| `params` | object | No | BERTopic hyperparameters |
-| `params.min_topic_size` | int | No | Minimum cluster size |
-| `params.nr_topics` | int | No | Target topic count (auto if omitted) |
-| `params.umap_n_neighbors` | int | No | UMAP neighbor count |
-| `params.umap_n_components` | int | No | UMAP output dimensions |
-| `metadata.pipelineId` | string | Yes | Parent pipeline ID |
-| `metadata.runId` | string | Yes | Current topic model run ID |
+| Field                      | Type           | Required | Description                                |
+| -------------------------- | -------------- | -------- | ------------------------------------------ |
+| `items`                    | array          | Yes      | Filtered submissions (post sentiment gate) |
+| `items[].submissionId`     | string         | Yes      | Unique submission identifier               |
+| `items[].text`             | string (min 1) | Yes      | Qualitative comment text                   |
+| `items[].embedding`        | number[768]    | Yes      | LaBSE 768-dim embedding vector             |
+| `params`                   | object         | No       | BERTopic hyperparameters                   |
+| `params.min_topic_size`    | int            | No       | Minimum cluster size                       |
+| `params.nr_topics`         | int            | No       | Target topic count (auto if omitted)       |
+| `params.umap_n_neighbors`  | int            | No       | UMAP neighbor count                        |
+| `params.umap_n_components` | int            | No       | UMAP output dimensions                     |
+| `metadata.pipelineId`      | string         | Yes      | Parent pipeline ID                         |
+| `metadata.runId`           | string         | Yes      | Current topic model run ID                 |
 
 ## Response
 
@@ -100,30 +100,30 @@ description: BERTopic-based topic discovery contract with embeddings, hyperparam
 
 ### Fields
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `version` | string | Yes | Worker/model version identifier |
-| `status` | enum | Yes | `completed` or `failed` |
-| `topics` | array | On success | Discovered topic clusters |
-| `topics[].topicIndex` | int | Yes | BERTopic topic_id (0, 1, 2...) |
-| `topics[].rawLabel` | string | Yes | BERTopic auto-generated label |
-| `topics[].keywords` | string[] | Yes | Top keywords from c-TF-IDF |
-| `topics[].docCount` | int | Yes | Number of documents in cluster |
-| `assignments` | array | On success | Soft topic assignments per submission |
-| `assignments[].submissionId` | string | Yes | Matches input submissionId |
-| `assignments[].topicIndex` | int | Yes | Assigned topic index |
-| `assignments[].probability` | number (0-1) | Yes | Assignment probability |
-| `metrics` | object | On success | Model quality metrics |
-| `outlierCount` | int | On success | Count of outlier documents (topic -1) |
-| `error` | string | On failure | Error message |
-| `completedAt` | ISO datetime | Yes | Processing completion timestamp |
+| Field                        | Type         | Required   | Description                           |
+| ---------------------------- | ------------ | ---------- | ------------------------------------- |
+| `version`                    | string       | Yes        | Worker/model version identifier       |
+| `status`                     | enum         | Yes        | `completed` or `failed`               |
+| `topics`                     | array        | On success | Discovered topic clusters             |
+| `topics[].topicIndex`        | int          | Yes        | BERTopic topic_id (0, 1, 2...)        |
+| `topics[].rawLabel`          | string       | Yes        | BERTopic auto-generated label         |
+| `topics[].keywords`          | string[]     | Yes        | Top keywords from c-TF-IDF            |
+| `topics[].docCount`          | int          | Yes        | Number of documents in cluster        |
+| `assignments`                | array        | On success | Soft topic assignments per submission |
+| `assignments[].submissionId` | string       | Yes        | Matches input submissionId            |
+| `assignments[].topicIndex`   | int          | Yes        | Assigned topic index                  |
+| `assignments[].probability`  | number (0-1) | Yes        | Assignment probability                |
+| `metrics`                    | object       | On success | Model quality metrics                 |
+| `outlierCount`               | int          | On success | Count of outlier documents (topic -1) |
+| `error`                      | string       | On failure | Error message                         |
+| `completedAt`                | ISO datetime | Yes        | Processing completion timestamp       |
 
 ## RunPod Envelope
 
 When deployed on RunPod, the request and response are wrapped by `RunPodBatchProcessor`:
 
-- **Request:** Sent as `{ "input": <request body above> }` to the RunPod `/runsync` endpoint.
-- **Response:** RunPod returns `{ "output": <response body above> }` on completion. Topic modeling routinely exceeds the `/runsync` timeout (~30s), so RunPod returns `{"id":"...","status":"IN_QUEUE"}` and the processor polls `/status/{id}` every 5 seconds until done (up to `BULLMQ_TOPIC_MODEL_HTTP_TIMEOUT_MS`, default 300s).
+- **Request:** Sent as `{ "input": ...request body... }` to the RunPod `/runsync` endpoint.
+- **Response:** RunPod returns `{ "output": ...response body... }` on completion. Topic modeling routinely exceeds the `/runsync` timeout (~30s), so RunPod returns `{"id":"...","status":"IN_QUEUE"}` and the processor polls `/status/{id}` every 5 seconds until done (up to `BULLMQ_TOPIC_MODEL_HTTP_TIMEOUT_MS`, default 300s).
 - **Auth:** `Authorization: Bearer <RUNPOD_API_KEY>` header is added when `RUNPOD_API_KEY` is configured.
 
 ## `completedAt` Format

@@ -13,17 +13,16 @@ An analysis pipeline processes all qualitative feedback for a given scope (semes
 
 **Endpoint:** `POST /analysis/pipelines`
 
-The caller provides a scope:
+The caller provides a scope using the canonical `{scopeType, scopeId}` pair. Only three tiers are supported — `FACULTY`, `DEPARTMENT`, `CAMPUS`.
 
-| Parameter | Required | Description |
-| --- | --- | --- |
-| `semesterId` | Yes | Target semester |
-| `facultyId` | No | Filter to a specific faculty member |
-| `questionnaireVersionId` | No | Filter to a specific version |
-| `departmentId` | No | Filter to a department |
-| `programId` | No | Filter to a program |
-| `campusId` | No | Filter to a campus |
-| `courseId` | No | Filter to a course |
+| Parameter                | Required      | Description                                                                                       |
+| ------------------------ | ------------- | ------------------------------------------------------------------------------------------------- |
+| `semesterId`             | Yes           | Target semester                                                                                   |
+| `scopeType`              | Auto-fillable | One of `FACULTY`, `DEPARTMENT`, `CAMPUS`. Auto-filled for callers with exactly one assigned scope |
+| `scopeId`                | Auto-fillable | UUID of the faculty/department/campus matching `scopeType`                                        |
+| `questionnaireVersionId` | No            | Optional version pin; omitted means "all active versions in scope"                                |
+
+> **Legacy bridge.** A transient preprocessor (`bridgeLegacyCreatePipelineInput`) maps the old multi-FK shape (`facultyId`/`departmentId`/`campusId`/`programId`/`courseId`/`questionnaireTypeCode`) onto the canonical pair and logs `deprecated_field_used`. PR-3 deletes this preprocessor and switches the schema to `.strict()` — clients must migrate before then.
 
 The orchestrator:
 
@@ -31,6 +30,8 @@ The orchestrator:
 2. **Computes coverage stats** — Counts submissions, comments, and enrollments within scope. Calculates response rate.
 3. **Generates warnings** — Flags low response rate (< 25%), insufficient submissions (< 30), insufficient comments (< 10), or stale enrollment data (> 24h since last sync).
 4. Returns the pipeline in `AWAITING_CONFIRMATION` status.
+
+The `AnalysisPipeline.trigger` column records how the pipeline was created — `USER` for human-initiated calls (default for any HTTP-driven create) and `SCHEDULER` for tiered-scheduler firings (see [§ Tiered Scheduler](#tiered-scheduler)).
 
 ## 2. Confirm Pipeline
 
@@ -157,3 +158,123 @@ Returns a structured response with:
 - Sentiment gate statistics
 - Warnings and error messages
 - Timestamps (created, confirmed, completed)
+
+The `scope` object returns **both IDs and display values** side-by-side (e.g., `{ semesterId, semesterCode, departmentId, departmentCode, facultyId, facultyName, ... }`). IDs are used by the frontend for cache keys and lookups; display values are used for rendering. See FAC-132 TD-9 for the contract.
+
+## Discovery
+
+**Endpoint:** `GET /analysis/pipelines`
+
+Returns the 10 most recent pipelines matching the query, ordered by `createdAt DESC`. Query parameters:
+
+| Parameter                | Required | Description                         |
+| ------------------------ | -------- | ----------------------------------- |
+| `semesterId`             | Yes      | Target semester                     |
+| `facultyId`              | No       | Filter to a specific faculty member |
+| `departmentId`           | No       | Filter to a department              |
+| `programId`              | No       | Filter to a program                 |
+| `campusId`               | No       | Filter to a campus                  |
+| `courseId`               | No       | Filter to a course                  |
+| `questionnaireVersionId` | No       | Filter to a specific version        |
+
+Scope-filling behavior per role is documented in [Access Control](#access-control).
+
+## Access Control
+
+Authorization for every `/analysis/*` endpoint is enforced at two layers:
+
+1. **Role guard (`@UseJwtGuard` + `RolesGuard`)** — class-level allowlist plus per-method widening. Roles outside the allowlist get `403 Forbidden` before the service runs.
+2. **Service-layer scope check** — `PipelineOrchestratorService` validates the caller's institutional scope against the pipeline's scope fields via `ScopeResolverService`. Belt-and-braces against guard misconfiguration.
+
+### Role allowlist per endpoint
+
+| Endpoint                                       | Allowed roles                                        |
+| ---------------------------------------------- | ---------------------------------------------------- |
+| `POST /analysis/pipelines`                     | SUPER_ADMIN, DEAN, CHAIRPERSON, CAMPUS_HEAD          |
+| `POST /analysis/pipelines/:id/confirm`         | SUPER_ADMIN, DEAN, CHAIRPERSON, CAMPUS_HEAD          |
+| `POST /analysis/pipelines/:id/cancel`          | SUPER_ADMIN, DEAN, CHAIRPERSON, CAMPUS_HEAD          |
+| `GET  /analysis/pipelines`                     | SUPER_ADMIN, DEAN, CHAIRPERSON, CAMPUS_HEAD, FACULTY |
+| `GET  /analysis/pipelines/:id/status`          | SUPER_ADMIN, DEAN, CHAIRPERSON, CAMPUS_HEAD, FACULTY |
+| `GET  /analysis/pipelines/:id/recommendations` | SUPER_ADMIN, DEAN, CHAIRPERSON, CAMPUS_HEAD, FACULTY |
+
+STUDENT and ADMIN are never in the allowlist. STUDENT is end-user; ADMIN is reserved for admin-console operations (not analytics).
+
+### Create / Confirm / Cancel / Read-by-id scope matrix
+
+These operations require an **explicit scope filter** on the axis appropriate to the caller's role. Absence of the filter returns `400 Bad Request` with `"scope filter required for your role"`. A filter outside the caller's resolved set returns `403 Forbidden` with `"scope not in your assigned access"`.
+
+| Role        | Required on create           | Validation against                          |
+| ----------- | ---------------------------- | ------------------------------------------- |
+| SUPER_ADMIN | None (`semesterId` only OK)  | — (unrestricted)                            |
+| DEAN        | `departmentId`               | `ResolveDepartmentIds(semesterId)`          |
+| CHAIRPERSON | `programId`                  | `ResolveProgramIds(semesterId)`             |
+| CAMPUS_HEAD | `campusId` OR `departmentId` | `ResolveCampusIds` / `ResolveDepartmentIds` |
+| FACULTY     | _(blocked at guard — 403)_   | —                                           |
+| STUDENT     | _(blocked at guard — 403)_   | —                                           |
+
+**Read-by-id additional rules:**
+
+- FACULTY may read `GET /:id/status` or `GET /:id/recommendations` only when `pipeline.faculty.id === user.id`. Department-scoped pipelines (null `faculty` FK) are 403 for FACULTY.
+- A pipeline with a **null** scope field on the caller's axis (e.g., `pipeline.department === null` for a DEAN) is 403 for all scoped roles — null means "no filter", i.e., broader-than-role access, reserved for SUPER_ADMIN.
+- Pipelines not found return `404 Not Found` **before** the scope check, so 404 takes precedence over 403. This exposes a minor existence-oracle for scoped roles who know a foreign UUID. Bounded by UUID opacity and the fact that FACULTY never learns foreign UUIDs (see list auto-override below).
+
+### List scope-filling
+
+`GET /analysis/pipelines` fills in the caller's resolved scope when the corresponding query parameter is omitted — this differs from create, which 400s on absence. Rationale: the dean dashboard can call `listPipelines({ semesterId })` without needing to enumerate department UUIDs on the client.
+
+| Role        | Behavior                                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| SUPER_ADMIN | Query unchanged.                                                                                                                            |
+| DEAN        | If `departmentId` omitted, service fills an IN-filter with `ResolveDepartmentIds(semesterId)`. If provided, verify ∈ resolved set else 403. |
+| CHAIRPERSON | Same with `programId` and `ResolveProgramIds(semesterId)`.                                                                                  |
+| CAMPUS_HEAD | Same with `campusId` and `ResolveCampusIds(semesterId)`.                                                                                    |
+| FACULTY     | `facultyId` is silently overridden to the caller's own user id. Any foreign `facultyId` in the query is dropped.                            |
+| STUDENT     | 403.                                                                                                                                        |
+
+The FACULTY auto-override prevents enumeration of other faculty's pipelines and ensures FACULTY never learns foreign pipeline UUIDs.
+
+### Population requirement for ownership checks
+
+`ConfirmPipeline`, `CancelPipeline`, `GetPipelineStatus`, and `GetRecommendations` populate `['faculty', 'department', 'program', 'campus']` on the pipeline before running `assertCanAccessPipeline`. Reading `pipeline.faculty?.id` through an unpopulated reference proxy is fragile — explicit populate is load-bearing.
+
+### Scope check ordering for side-effecting endpoints
+
+For `ConfirmPipeline` and `CancelPipeline`, the scope check runs **before** any `fork.flush()`, status mutation, or queue enqueue. A foreign caller must never cause side effects — even when an unrelated check (e.g., worker URL misconfiguration) would otherwise fail the pipeline.
+
+### Unique-scope invariant
+
+A partial unique index (`uq_analysis_pipeline_active_scope`) enforces one active pipeline per `(semester, scope tuple)` at the DB level. Concurrent creates with identical scope produce `UniqueConstraintViolationException`; the orchestrator catches it and re-fetches the winner so both callers see the same pipeline id (idempotent).
+
+### Scope drift mid-pipeline
+
+A DEAN who triggers a pipeline and is then reassigned to a different department mid-execution loses read access to their own pipeline. This mirrors `/analytics/*` behavior and is intentional — the scope check evaluates against current assignments, not historical ones.
+
+## Tiered Scheduler
+
+`TieredPipelineSchedulerJob` (`src/crons/jobs/analysis-jobs/tiered-pipeline-scheduler.job.ts`) auto-enqueues pipelines for active scopes that have new submissions since the last completed run. It runs three independent tiers, each with its own `@Cron` decorator and its own `isRunning` flag:
+
+| Tier         | Cron expression | Cron name                                      |
+| ------------ | --------------- | ---------------------------------------------- |
+| `FACULTY`    | `0 1 * * 0`     | `TieredPipelineSchedulerJob.RunFacultyTier`    |
+| `DEPARTMENT` | `0 2 * * 0`     | `TieredPipelineSchedulerJob.RunDepartmentTier` |
+| `CAMPUS`     | `0 3 * * 0`     | `TieredPipelineSchedulerJob.RunCampusTier`     |
+
+Cron names and expressions are exported from `tiered-scheduler.constants.ts` so the orchestrator can introspect the next firing without a circular import.
+
+### Per-tier flow
+
+For each scope returned by `orchestrator.FindActiveScopesForTier(tier)`:
+
+1. **Skip-check** — `submissionRepository.FindChangedSince(scopeFilter, lastPipelineCompletedAt)` counts submissions created after the previous completed pipeline. Zero new submissions ⇒ skip (logged at `debug`).
+2. **Enqueue** — Otherwise, `orchestrator.CreateAndConfirmPipeline({...scope, triggeredById: systemUserId})` bypasses the human gate and dispatches sentiment immediately. The pipeline is tagged `trigger=SCHEDULER`.
+3. **Per-tier exclusion** — `running[tier]` short-circuits the next firing if the previous one is still in progress. Tiers are independent so a long faculty run does not block the department or campus tier that follows an hour later.
+
+If a scheduler-driven pipeline cannot satisfy coverage requirements at firing time, it still completes (rather than failing) but persists `warnings: ['insufficient_coverage_at_schedule_time']` for transparency.
+
+### System-user attribution
+
+Scheduler-driven pipelines need an `actorId` for audit metadata. `resolveSystemUserId()` looks up the seeded SUPER_ADMIN by `env.SUPER_ADMIN_USERNAME` and uses its UUID. If the lookup fails, the tier returns `failed` and emits an error log — no pipelines are enqueued, since attribution would otherwise be lost.
+
+### Next-run surfacing
+
+`GET /analysis/pipelines/:id/status` returns `nextScheduledRunAt` (ISO 8601 UTC) so the frontend can render "next refresh in N hours" copy. The value is computed by `getNextScheduledRunAt(tier)` via `SchedulerRegistry` + `cron-parser`, falling back to a parsed cron expression when the registry has not yet registered the job (e.g., during boot).

@@ -156,10 +156,10 @@ Authentication uses a priority-based strategy pattern (`src/modules/auth/strateg
 - **`Execute(em, localUser, body)`**: Performs authentication and returns the user + optional Moodle token.
 - **`priority`**: Numeric ordering (lower = higher precedence).
 
-| Strategy | Priority | When it handles |
-| --- | --- | --- |
-| `LocalLoginStrategy` | 10 | User exists and has a local password |
-| `MoodleLoginStrategy` | 100 | User has no local password or doesn't exist yet |
+| Strategy              | Priority | When it handles                                 |
+| --------------------- | -------- | ----------------------------------------------- |
+| `LocalLoginStrategy`  | 10       | User exists and has a local password            |
+| `MoodleLoginStrategy` | 100      | User has no local password or doesn't exist yet |
 
 Priority ranges: `0-99` core auth, `100-199` external providers, `200+` fallbacks. To add a new provider, implement `LoginStrategy` and register it under the `LOGIN_STRATEGIES` injection token.
 
@@ -167,12 +167,12 @@ Priority ranges: `0-99` core auth, `100-199` external providers, `200+` fallback
 
 Institutional sync (categories, courses, enrollments) uses a BullMQ-based composite job instead of individual cron jobs. See [Institutional Sync Workflow](/docs/workflows/institutional-sync) for the full flow.
 
-| Component | Purpose |
-| --- | --- |
-| `MoodleStartupService` | Blocking startup orchestrator — categories always, courses/enrollments gated by env |
-| `MoodleSyncProcessor` | BullMQ processor — runs categories → courses → enrollments; creates/updates `SyncLog` with per-phase metrics |
-| `MoodleSyncScheduler` | Dynamic `SchedulerRegistry`-based cron (env-aware, admin-configurable via `SystemConfig`) |
-| `MoodleSyncController` | Sync trigger, status, paginated history, schedule get/update — all SUPER_ADMIN only |
+| Component              | Purpose                                                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `MoodleStartupService` | Blocking startup orchestrator — categories always, courses/enrollments gated by env                          |
+| `MoodleSyncProcessor`  | BullMQ processor — runs categories → courses → enrollments; creates/updates `SyncLog` with per-phase metrics |
+| `MoodleSyncScheduler`  | Dynamic `SchedulerRegistry`-based cron (env-aware, admin-configurable via `SystemConfig`)                    |
+| `MoodleSyncController` | Sync trigger, status, paginated history, schedule get/update — all SUPER_ADMIN only                          |
 
 Phase dependency: if categories fail, courses and enrollments are skipped. If courses fail, enrollments are skipped.
 
@@ -180,10 +180,10 @@ Phase dependency: if categories fail, courses and enrollments are skipped. If co
 
 Cron jobs using the `BaseJob` pattern:
 
-| Job | Schedule | Module | Purpose |
-| --- | --- | --- | --- |
-| `RefreshTokenCleanupJob` | Every 12 hours | `AllCronJobs` | Purges refresh tokens older than 7 days |
-| `ReportCleanupJob` | Daily at 3 AM | ReportsModule | Purges expired report jobs + R2 objects, orphaned waiting jobs |
+| Job                      | Schedule       | Module        | Purpose                                                        |
+| ------------------------ | -------------- | ------------- | -------------------------------------------------------------- |
+| `RefreshTokenCleanupJob` | Every 12 hours | `AllCronJobs` | Purges refresh tokens older than 7 days                        |
+| `ReportCleanupJob`       | Daily at 3 AM  | ReportsModule | Purges expired report jobs + R2 objects, orphaned waiting jobs |
 
 ## 6. Moodle Connectivity & Error Handling
 
@@ -210,19 +210,19 @@ The `PipelineOrchestratorService` manages the full analysis lifecycle through a 
 
 ### Components
 
-| Component | Purpose |
-| --- | --- |
-| `PipelineOrchestratorService` | Creates pipelines, manages stage transitions, dispatches batch jobs |
-| `AnalysisService` | Low-level entry point — `EnqueueJob()` and `EnqueueBatch()` for ad-hoc jobs |
-| `AnalysisController` | REST API for pipeline CRUD (`POST/GET /analysis/pipelines`) |
-| `BaseBatchProcessor` | Abstract base — HTTP dispatch, Zod validation, retry, stall detection |
-| `RunPodBatchProcessor` | RunPod-specific subclass — auth headers, `{ input/output }` envelope handling |
-| `SentimentProcessor` | Batch sentiment analysis, triggers sentiment gate on completion |
-| `TopicModelProcessor` | Batch topic modeling via RunPod, chunked assignment persistence |
-| `TopicLabelService` | LLM-based labeling of BERTopic topics (gpt-4o-mini, inline before recommendations) |
-| `RecommendationGenerationService` | Builds LLM prompts from DB data, calls OpenAI, computes confidence and evidence |
-| `RecommendationsProcessor` | BullMQ processor — delegates to `RecommendationGenerationService`, persists results |
-| `EmbeddingProcessor` | Per-submission embedding generation (upsert, extends `BaseAnalysisProcessor`) |
+| Component                         | Purpose                                                                             |
+| --------------------------------- | ----------------------------------------------------------------------------------- |
+| `PipelineOrchestratorService`     | Creates pipelines, manages stage transitions, dispatches batch jobs                 |
+| `AnalysisService`                 | Low-level entry point — `EnqueueJob()` and `EnqueueBatch()` for ad-hoc jobs         |
+| `AnalysisController`              | REST API for pipeline CRUD (`POST/GET /analysis/pipelines`)                         |
+| `BaseBatchProcessor`              | Abstract base — HTTP dispatch, Zod validation, retry, stall detection               |
+| `RunPodBatchProcessor`            | RunPod-specific subclass — auth headers, `{ input/output }` envelope handling       |
+| `SentimentProcessor`              | Batch sentiment analysis, triggers sentiment gate on completion                     |
+| `TopicModelProcessor`             | Batch topic modeling via RunPod, chunked assignment persistence                     |
+| `TopicLabelService`               | LLM-based labeling of BERTopic topics (gpt-4o-mini, inline before recommendations)  |
+| `RecommendationGenerationService` | Builds LLM prompts from DB data, calls OpenAI, computes confidence and evidence     |
+| `RecommendationsProcessor`        | BullMQ processor — delegates to `RecommendationGenerationService`, persists results |
+| `EmbeddingProcessor`              | Per-submission embedding generation (upsert, extends `BaseAnalysisProcessor`)       |
 
 ### Pipeline Stages
 
@@ -236,47 +236,47 @@ Each stage has a corresponding `RunStatus` (`PENDING` → `PROCESSING` → `COMP
 
 Eight BullMQ queues with independent concurrency. Queue names are centralized in `src/configurations/common/queue-names.ts`.
 
-| Queue | Processor | Concurrency Default | Module |
-| --- | --- | --- | --- |
-| `moodle-sync` | `MoodleSyncProcessor` | 1 | MoodleModule |
-| `sentiment` | `SentimentProcessor` | 3 | AnalysisModule |
-| `embedding` | `EmbeddingProcessor` | 3 | AnalysisModule |
-| `topic-model` | `TopicModelProcessor` | 1 | AnalysisModule |
-| `recommendations` | `RecommendationsProcessor` | 1 | AnalysisModule |
-| `analytics-refresh` | `AnalyticsRefreshProcessor` | 1 | AnalyticsModule |
-| `audit` | `AuditProcessor` | 1 | AuditModule |
-| `report-generation` | `ReportGenerationProcessor` | 2 | ReportsModule |
+| Queue               | Processor                   | Concurrency Default | Module          |
+| ------------------- | --------------------------- | ------------------- | --------------- |
+| `moodle-sync`       | `MoodleSyncProcessor`       | 1                   | MoodleModule    |
+| `sentiment`         | `SentimentProcessor`        | 3                   | AnalysisModule  |
+| `embedding`         | `EmbeddingProcessor`        | 3                   | AnalysisModule  |
+| `topic-model`       | `TopicModelProcessor`       | 1                   | AnalysisModule  |
+| `recommendations`   | `RecommendationsProcessor`  | 1                   | AnalysisModule  |
+| `analytics-refresh` | `AnalyticsRefreshProcessor` | 1                   | AnalyticsModule |
+| `audit`             | `AuditProcessor`            | 1                   | AuditModule     |
+| `report-generation` | `ReportGenerationProcessor` | 2                   | ReportsModule   |
 
 ### REST Endpoints
 
-| Method | Path | Description |
-| --- | --- | --- |
-| POST | `/analysis/pipelines` | Create a pipeline (returns coverage stats + warnings) |
-| POST | `/analysis/pipelines/:id/confirm` | Confirm and start execution |
-| POST | `/analysis/pipelines/:id/cancel` | Cancel a non-terminal pipeline |
-| GET | `/analysis/pipelines/:id/status` | Get pipeline status with stage details |
-| GET | `/analysis/pipelines/:id/recommendations` | Get recommendations for a completed pipeline |
+| Method | Path                                      | Description                                           |
+| ------ | ----------------------------------------- | ----------------------------------------------------- |
+| POST   | `/analysis/pipelines`                     | Create a pipeline (returns coverage stats + warnings) |
+| POST   | `/analysis/pipelines/:id/confirm`         | Confirm and start execution                           |
+| POST   | `/analysis/pipelines/:id/cancel`          | Cancel a non-terminal pipeline                        |
+| GET    | `/analysis/pipelines/:id/status`          | Get pipeline status with stage details                |
+| GET    | `/analysis/pipelines/:id/recommendations` | Get recommendations for a completed pipeline          |
 
 ### Analytics Endpoints
 
 See [Analytics Module](/docs/architecture/analytics) for full architecture.
 
-| Method | Path | Description |
-| --- | --- | --- |
-| GET | `/analytics/overview` | Department overview with per-faculty stats |
-| GET | `/analytics/attention` | Faculty flagged for review with attention flags |
-| GET | `/analytics/trends` | Faculty trend data with linear regression results |
+| Method | Path                   | Description                                       |
+| ------ | ---------------------- | ------------------------------------------------- |
+| GET    | `/analytics/overview`  | Department overview with per-faculty stats        |
+| GET    | `/analytics/attention` | Faculty flagged for review with attention flags   |
+| GET    | `/analytics/trends`    | Faculty trend data with linear regression results |
 
 ### Report Generation Endpoints
 
 See [Report Generation Workflow](/docs/workflows/report-generation) for the full async flow.
 
-| Method | Path | Description |
-| --- | --- | --- |
-| POST | `/reports/generate` | Queue a single faculty evaluation PDF |
-| POST | `/reports/generate/batch` | Queue batch PDF generation (scope-filtered, throttled) |
-| GET | `/reports/status/:jobId` | Poll single report job status + download URL |
-| GET | `/reports/batch/:batchId` | Poll batch progress with paginated per-job details |
+| Method | Path                      | Description                                            |
+| ------ | ------------------------- | ------------------------------------------------------ |
+| POST   | `/reports/generate`       | Queue a single faculty evaluation PDF                  |
+| POST   | `/reports/generate/batch` | Queue batch PDF generation (scope-filtered, throttled) |
+| GET    | `/reports/status/:jobId`  | Poll single report job status + download URL           |
+| GET    | `/reports/batch/:batchId` | Poll batch progress with paginated per-job details     |
 
 **Resilience:** Exponential backoff retries, stall detection, graceful degradation when Redis is unavailable (`ServiceUnavailableException`), HTTP timeout via `AbortController`.
 
@@ -286,10 +286,10 @@ See [Report Generation Workflow](/docs/workflows/report-generation) for the full
 
 The `HealthModule` uses `@nestjs/terminus` to provide structured health checks at `GET /health`:
 
-| Indicator | Checks |
-| --- | --- |
+| Indicator  | Checks                                  |
+| ---------- | --------------------------------------- |
 | `database` | `SELECT 1` via MikroORM `EntityManager` |
-| `redis` | Read/write test via cache manager |
+| `redis`    | Read/write test via cache manager       |
 
 Returns HTTP 200 with `status: 'ok'` when healthy, HTTP 503 with `status: 'error'` and per-indicator details when unhealthy.
 
@@ -317,20 +317,20 @@ Request → JwtAuthGuard → RolesGuard → CurrentUserInterceptor → CLS Store
 
 When explicit filter params (`departmentId`, `programId`) are provided, they are validated against the resolved scope:
 
-| Scenario | Result |
-| --- | --- |
-| `departmentId` outside scope | `403 Forbidden` |
-| `programId` not found | `404 Not Found` |
-| `programId` department outside scope | `403 Forbidden` |
+| Scenario                              | Result            |
+| ------------------------------------- | ----------------- |
+| `departmentId` outside scope          | `403 Forbidden`   |
+| `programId` not found                 | `404 Not Found`   |
+| `programId` department outside scope  | `403 Forbidden`   |
 | `departmentId` + `programId` mismatch | `400 Bad Request` |
 
 ### Modules
 
-| Module | Endpoints | Purpose |
-| --- | --- | --- |
-| `FacultyModule` | `GET /faculty` | Paginated faculty list with course assignments |
-| `FacultyModule` | `GET /faculty/:facultyId/submission-count` | Submission count for a faculty member per semester |
-| `CurriculumModule` | `GET /curriculum/departments`, `/programs`, `/courses` | Institutional hierarchy for filter dropdowns |
+| Module             | Endpoints                                              | Purpose                                            |
+| ------------------ | ------------------------------------------------------ | -------------------------------------------------- |
+| `FacultyModule`    | `GET /faculty`                                         | Paginated faculty list with course assignments     |
+| `FacultyModule`    | `GET /faculty/:facultyId/submission-count`             | Submission count for a faculty member per semester |
+| `CurriculumModule` | `GET /curriculum/departments`, `/programs`, `/courses` | Institutional hierarchy for filter dropdowns       |
 
 Both modules import `CommonModule` (for `ScopeResolverService`) and `DataLoaderModule` (for `CurrentUserInterceptor` → `UserLoader`).
 
@@ -340,6 +340,6 @@ The `CurriculumModule` endpoints return flat arrays (no pagination) since result
 
 The application enforces a strict initialization sequence in `InitializeDatabase` before it begins accepting traffic. This ensures that the database schema and required infrastructure state are always synchronized with the code.
 
-1. **Migration (`orm.migrator.up()`):** Automatically applies any pending database migrations.
-2. **Infrastructure Seeding (`orm.seeder.seed(DatabaseSeeder)`):** Executes idempotent seeders (e.g., `DimensionSeeder`) to populate required reference data.
-3. **Application Bootstrap:** Only after both steps succeed does `app.listen()` execute. If any step fails, the process exits with code 1.
+1.  **Migration (`orm.migrator.up()`):** Automatically applies any pending database migrations.
+2.  **Infrastructure Seeding (`orm.seeder.seed(DatabaseSeeder)`):** Executes idempotent seeders (e.g., `DimensionSeeder`) to populate required reference data.
+3.  **Application Bootstrap:** Only after both steps succeed does `app.listen()` execute. If any step fails, the process exits with code 1.

@@ -280,7 +280,7 @@ All UI is built from existing shadcn primitives — no custom component library 
 | Comments textarea | `Textarea` | `components/ui/textarea` | Already in project |
 | Weight / required badges | `Badge` | `components/ui/badge` | Already in project |
 | Toast notifications | `toast` (Sonner) | `components/ui/sonner` | Already in project |
-| Matrix table | Plain HTML table + Tailwind | N/A | shadcn `Table` is designed for data tables — a plain semantic HTML table with Tailwind gives full control over the matrix layout and responsive breakpoint switch |
+| Matrix table | **Plain `<table>` + Tailwind** | N/A | shadcn `Table` is designed for data tables — a plain semantic `<table>` with Tailwind gives full control over the matrix layout and responsive breakpoint switch |
 
 ### File Placement
 
@@ -288,12 +288,12 @@ All UI is built from existing shadcn primitives — no custom component library 
 features/questionnaires/
   components/
     form/
-      questionnaire-form-renderer.tsx    <- main component (exported)
-      questionnaire-form-section.tsx     <- section card with matrix table
-      questionnaire-form-matrix.tsx      <- desktop Likert matrix table
-      questionnaire-form-stacked.tsx     <- mobile stacked question layout
-      questionnaire-form-qualitative.tsx <- qualitative comment card
-      questionnaire-form-progress.tsx    <- completion progress indicator
+      questionnaire-form-renderer.tsx    ← main component (exported)
+      questionnaire-form-section.tsx     ← section card with matrix table
+      questionnaire-form-matrix.tsx      ← desktop Likert matrix table
+      questionnaire-form-stacked.tsx     ← mobile stacked question layout
+      questionnaire-form-qualitative.tsx ← qualitative comment card
+      questionnaire-form-progress.tsx    ← completion progress indicator
 ```
 
 These are **feature components**, not route-local `_components`, because they are consumed by two different route trees (`/superadmin/...` and `/student/...`).
@@ -339,7 +339,7 @@ graph TD
 | `FormRenderer` | Answer state, qualitative state, completion derivation, `onChange` firing | `model`, `mode`, `defaultValues`, `onChange` |
 | `FormProgress` | Progress bar rendering | `answeredCount`, `totalRequired`, `isComplete` |
 | `FormSection` | Section card chrome (title, weight badge, section progress), recursion for nested sections | `section`, `mode`, `answers`, `onAnswer` |
-| `FormMatrix` | Desktop table layout with scale header + question rows | `questions`, `questionType`, `mode`, `answers`, `onAnswer` |
+| `FormMatrix` | Desktop `<table>` layout with scale header + question rows | `questions`, `questionType`, `mode`, `answers`, `onAnswer` |
 | `FormStacked` | Mobile stacked layout with pill radio buttons | `questions`, `questionType`, `mode`, `answers`, `onAnswer` |
 | `FormQualitative` | Comments card with textarea + character count | `config`, `mode`, `value`, `onChangeComment` |
 
@@ -503,10 +503,10 @@ flowchart TD
 
 ```
 Superadmin navigates to preview page
-  -> page fetches QuestionnaireVersionDetail (or reads from builder store)
-  -> deserializeQuestionnaireVersionToDraft() -> QuestionnaireBuilderDraft
-  -> buildQuestionnairePreviewModel() -> QuestionnaireBuilderPreviewModel
-  -> QuestionnaireFormRenderer model={model} mode="preview"
+  → page fetches QuestionnaireVersionDetail (or reads from builder store)
+  → deserializeQuestionnaireVersionToDraft() → QuestionnaireBuilderDraft
+  → buildQuestionnairePreviewModel() → QuestionnaireBuilderPreviewModel
+  → <QuestionnaireFormRenderer model={model} mode="preview" />
 ```
 
 No form state, no API calls, no submission. The component just renders disabled inputs.
@@ -517,21 +517,22 @@ The student evaluation always uses the `FACULTY_FEEDBACK` questionnaire type. Th
 
 ```
 Student navigates to /student/courses/:courseId/evaluation
-  -> page resolves enrollment context (course, faculty, semester from enrollment.semester)
-  -> page fetches active FACULTY_FEEDBACK version via fetchQuestionnaireVersionsByType("FACULTY_FEEDBACK")
-  -> page checks if student already submitted (GET /questionnaires/submissions/check)
-      -> if yes: render "already submitted" state (no form)
-      -> if no: continue
-  -> deserialize + buildPreviewModel (same pipeline as preview)
-  -> page fetches existing draft via GET /questionnaires/drafts?versionId=...&facultyId=...&semesterId=...
-      -> if draft exists AND draft.versionId matches active version: hydrate as defaultValues
-      -> if draft exists BUT versionId mismatches: discard stale draft, start fresh
-      -> if no draft: start with empty form
-  -> QuestionnaireFormRenderer
+  → page resolves enrollment context (course, faculty, semester from enrollment.semester)
+  → page fetches active FACULTY_FEEDBACK version via fetchQuestionnaireVersionsByType("FACULTY_FEEDBACK")
+  → page checks if student already submitted (GET /questionnaires/submissions/check)
+      → if yes: render "already submitted" state (no form)
+      → if no: continue
+  → deserialize + buildPreviewModel (same pipeline as preview)
+  → page fetches existing draft via GET /questionnaires/drafts?versionId=...&facultyId=...&semesterId=...
+      → if draft exists AND draft.versionId matches active version: hydrate as defaultValues
+      → if draft exists BUT versionId mismatches: discard stale draft, start fresh
+      → if no draft: start with empty form
+  → <QuestionnaireFormRenderer
       model={model}
       mode="interactive"
-      defaultValues={draft}    <- hydrate from saved draft if exists
-      onChange={handleChange}  <- capture values for auto-save and submit
+      defaultValues={draft}    ← hydrate from saved draft if exists
+      onChange={handleChange}  ← capture values for auto-save and submit
+    />
 ```
 
 The page (not the renderer) owns submission and draft-save logic:
@@ -556,7 +557,7 @@ If the student has already submitted an evaluation for the current faculty + cou
 | [FAC-62](https://github.com/CtrlAltElite-Devs/api.faculytics/issues/133) | Expose active semester in enrollment context — frontend needs `semesterId` for submission and drafts | **Resolved** |
 | [FAC-63](https://github.com/CtrlAltElite-Devs/api.faculytics/issues/134) | Add `GET /submissions/check` endpoint — frontend needs to proactively check if student already submitted | **Resolved** |
 
-**FAC-62 resolution:** The `GET /enrollments/me` endpoint now includes a `semester` field on each enrollment. The frontend extracts `semesterId` from the resolved enrollment (`enrollment.semester.id`). The semester is derived from the course's program to department to semester relation chain. It can be `null` if the hierarchy is incomplete, which the evaluation page should guard against.
+**FAC-62 resolution:** The `GET /enrollments/me` endpoint now includes a `semester` field on each enrollment. The frontend extracts `semesterId` from the resolved enrollment (`enrollment.semester.id`). The semester is derived from the course's program → department → semester relation chain. It can be `null` if the hierarchy is incomplete, which the evaluation page should guard against.
 
 ```typescript
 // New type added to features/enrollments/types/index.ts
@@ -625,8 +626,8 @@ The questionnaire schema supports up to 4 levels of section nesting. A section c
 
 The renderer handles this recursively:
 
-- **Internal section** renders a card with a title, then recursively renders its children.
-- **Leaf section** renders a card with a title, weight badge, and the Likert matrix table (desktop) or stacked layout (mobile) containing its questions.
+- **Internal section** → renders a card with a title, then recursively renders its children.
+- **Leaf section** → renders a card with a title, weight badge, and the Likert matrix table (desktop) or stacked layout (mobile) containing its questions.
 
 This matches how the builder serializer already structures the `QuestionnaireBuilderPreviewModel` — the `children` and `questions` arrays on each section are mutually exclusive in practice (a section has one or the other).
 
@@ -636,7 +637,7 @@ This matches how the builder serializer already structures the `QuestionnaireBui
 
 - Each radio group uses a `RadioGroup` with `aria-label` set to the question text.
 - In preview mode, inputs have `disabled` and `aria-disabled="true"`.
-- The matrix table uses proper HTML table semantics with `thead`, `tbody`, `th scope="col"` for scale headers, and `th scope="row"` for question text.
+- The matrix table uses proper `<table>` semantics with `<thead>`, `<tbody>`, `<th scope="col">` for scale headers, and `<th scope="row">` for question text.
 - Focus management: tabbing through the form moves through radio groups in question order.
 - The qualitative textarea has `aria-required` set based on the schema config.
 
@@ -681,12 +682,12 @@ active version ID = fetched from API
 draft version ID  = draft.versionId from GET /questionnaires/drafts
 
 if draft exists AND draft.versionId === active version ID:
-  -> hydrate form with draft.answers and draft.qualitativeComment
+  → hydrate form with draft.answers and draft.qualitativeComment
 if draft exists AND draft.versionId !== active version ID:
-  -> delete stale draft via DELETE /questionnaires/drafts/:id
-  -> start with empty form
+  → delete stale draft via DELETE /questionnaires/drafts/:id
+  → start with empty form
 if no draft:
-  -> start with empty form
+  → start with empty form
 ```
 
 ### Save Trigger
@@ -716,7 +717,7 @@ stateDiagram-v2
     EmptyForm --> FormActive
 
     FormActive --> Debounce: student answers question
-    Debounce --> SaveDraft: 3s elapsed, at least 1 answer
+    Debounce --> SaveDraft: 3s elapsed, ≥1 answer
     SaveDraft --> SaveOK: 200 OK
     SaveDraft --> RetryOnce: error
     RetryOnce --> SaveOK: 200 OK
@@ -728,9 +729,9 @@ stateDiagram-v2
     Validate --> ToastError: unanswered required questions
     ToastError --> FormActive
     Validate --> SubmitAPI: all required answered
-    SubmitAPI --> SuccessRedirect: 200 OK, toast + redirect /student/courses
-    SubmitAPI --> DuplicateRedirect: 409 Conflict, toast + redirect
-    SubmitAPI --> SubmitError: other error, toast
+    SubmitAPI --> SuccessRedirect: 200 OK → toast + redirect /student/courses
+    SubmitAPI --> DuplicateRedirect: 409 Conflict → toast + redirect
+    SubmitAPI --> SubmitError: other error → toast
 
     AlreadySubmitted --> [*]
     SuccessRedirect --> [*]
@@ -787,34 +788,34 @@ The student evaluation page hardcodes `FACULTY_FEEDBACK` as the questionnaire ty
 
 ## 13. Implementation Tips
 
-This section maps every new file to its correct location per the project's [feature-sliced architecture](/docs/frontend/architecture), with notes on where to hook things together.
+This section maps every new file to its correct location per the project's [feature-sliced architecture](/docs/ARCHITECTURE), with notes on where to hook things together.
 
 ### New Files — Where They Go
 
 ```
 features/questionnaires/
   components/
-    form/                                         <- NEW directory
-      questionnaire-form-renderer.tsx             <- main renderer (export from barrel)
-      questionnaire-form-section.tsx              <- section card, recursion for nesting
-      questionnaire-form-matrix.tsx               <- desktop table matrix
-      questionnaire-form-stacked.tsx              <- mobile stacked pills layout
-      questionnaire-form-qualitative.tsx          <- qualitative comment card
-      questionnaire-form-progress.tsx             <- progress bar component
+    form/                                         ← NEW directory
+      questionnaire-form-renderer.tsx             ← main renderer (export from barrel)
+      questionnaire-form-section.tsx              ← section card, recursion for nesting
+      questionnaire-form-matrix.tsx               ← desktop <table> matrix
+      questionnaire-form-stacked.tsx              ← mobile stacked pills layout
+      questionnaire-form-qualitative.tsx          ← qualitative comment card
+      questionnaire-form-progress.tsx             ← progress bar component
   api/
-    questionnaire.requests.ts                     <- ADD submission/draft request functions here
+    questionnaire.requests.ts                     ← ADD submission/draft request functions here
   hooks/
-    use-submit-evaluation.ts                      <- NEW: useMutation for POST /submissions
-    use-save-draft.ts                             <- NEW: useMutation for POST /drafts
-    use-evaluation-draft.ts                       <- NEW: useQuery for GET /drafts
-    use-check-submission.ts                       <- NEW: useQuery for GET /submissions/check
-    use-active-questionnaire-version.ts           <- NEW: useQuery to fetch active version by type
+    use-submit-evaluation.ts                      ← NEW: useMutation for POST /submissions
+    use-save-draft.ts                             ← NEW: useMutation for POST /drafts
+    use-evaluation-draft.ts                       ← NEW: useQuery for GET /drafts
+    use-check-submission.ts                       ← NEW: useQuery for GET /submissions/check
+    use-active-questionnaire-version.ts           ← NEW: useQuery to fetch active version by type
   types/
-    index.ts                                      <- ADD QuestionnaireFormMode, QuestionnaireFormValues, etc.
-  index.ts                                        <- export QuestionnaireFormRenderer + new hooks
+    index.ts                                      ← ADD QuestionnaireFormMode, QuestionnaireFormValues, etc.
+  index.ts                                        ← export QuestionnaireFormRenderer + new hooks
 ```
 
-**Why `features/questionnaires/components/form/`?** These components are consumed by two route trees (`/superadmin/...` and `/student/...`), so they must live in the feature slice — not in route-local `_components/`. Per ARCHITECTURE.md section 5: "Use a feature slice when the code belongs to a domain, not a single route."
+**Why `features/questionnaires/components/form/`?** These components are consumed by two route trees (`/superadmin/...` and `/student/...`), so they must live in the feature slice — not in route-local `_components/`. Per ARCHITECTURE.md §5: "Use a feature slice when the code belongs to a domain, not a single route."
 
 ### Route-Level Pages — What Changes
 
@@ -823,25 +824,25 @@ app/(dashboard)/
   superadmin/
     questionnaires/
       preview/
-        page.tsx                                  <- UPDATE: swap old renderer for QuestionnaireFormRenderer mode="preview"
+        page.tsx                                  ← UPDATE: swap old renderer for QuestionnaireFormRenderer mode="preview"
       new/
         preview/
-          page.tsx                                <- UPDATE: same swap
+          page.tsx                                ← UPDATE: same swap
   student/
     courses/
       [courseId]/
         evaluation/
-          page.tsx                                <- UPDATE: orchestrate evaluation flow, render QuestionnaireFormRenderer mode="interactive"
-          _components/                            <- OPTIONAL: route-local components if the page grows large
-            evaluation-already-submitted.tsx       <- "Already submitted" state card (only used by this route)
-            evaluation-no-faculty.tsx              <- "No instructor assigned" error card
+          page.tsx                                ← UPDATE: orchestrate evaluation flow, render QuestionnaireFormRenderer mode="interactive"
+          _components/                            ← OPTIONAL: route-local components if the page grows large
+            evaluation-already-submitted.tsx       ← "Already submitted" state card (only used by this route)
+            evaluation-no-faculty.tsx              ← "No instructor assigned" error card
 ```
 
-**Why `_components/` for evaluation sub-states?** The "already submitted" and "no faculty" cards are route-only UI — they are consumed by exactly one page. Per ARCHITECTURE.md section 5: "Use route-local `_components/` when the UI is only used by one route."
+**Why `_components/` for evaluation sub-states?** The "already submitted" and "no faculty" cards are route-only UI — they are consumed by exactly one page. Per ARCHITECTURE.md §5: "Use route-local `_components/` when the UI is only used by one route."
 
 ### API Request Functions
 
-Add to the existing `features/questionnaires/api/questionnaire.requests.ts` — do **not** create a new file under `network/requests/`. Per ARCHITECTURE.md section 9: "Do not reintroduce root `network/requests/*` feature files."
+Add to the existing `features/questionnaires/api/questionnaire.requests.ts` — do **not** create a new file under `network/requests/`. Per ARCHITECTURE.md §9: "Do not reintroduce root `network/requests/*` feature files."
 
 ```typescript
 // In features/questionnaires/api/questionnaire.requests.ts — add these:
@@ -908,7 +909,7 @@ Delete `features/questionnaires/components/builder/questionnaire-preview-rendere
 
 ### Import Conventions
 
-Per ARCHITECTURE.md section 7:
+Per ARCHITECTURE.md §7:
 
 ```typescript
 // From a page file (e.g., student evaluation page):
@@ -924,7 +925,7 @@ import { QuestionnaireFormSection } from "./questionnaire-form-section"; // rela
 
 ### State Placement Reminder
 
-Per ARCHITECTURE.md section 5 state placement rule:
+Per ARCHITECTURE.md §5 state placement rule:
 
 | State | Owner | Reason |
 |-------|-------|--------|
@@ -976,7 +977,7 @@ In `network/endpoints.ts`, add the new paths for submissions, submission check, 
 
 **Step 2.1 — `questionnaire-form-matrix.tsx`** (leaf)
 
-The desktop table layout. Handles both `LIKERT_1_5` (5 columns) and `YES_NO` (2 columns) based on `questionType` prop. Receives `questions`, `answers`, `onAnswer`, `mode`. Wrap with `React.memo`.
+The desktop `<table>` layout. Handles both `LIKERT_1_5` (5 columns) and `YES_NO` (2 columns) based on `questionType` prop. Receives `questions`, `answers`, `onAnswer`, `mode`. Wrap with `React.memo`.
 
 Start here because this is the core visual component — you can test it in isolation with hardcoded data before wiring anything.
 
@@ -1015,11 +1016,11 @@ The main exported component. Owns:
 - `useCallback` for the stable `onAnswer` handler
 - Fires `onChange` to parent on every state change
 
-Renders: `FormProgress` then sections loop then `FormQualitative`.
+Renders: `FormProgress` → sections loop → `FormQualitative`.
 
 In preview mode: no state, no `onChange`, no progress bar — just disabled inputs.
 
-**Verification checkpoint:** At this point, you can render `QuestionnaireFormRenderer` with `model={someModel}` and `mode="preview"` in a throwaway page and see the full form with disabled inputs.
+**Verification checkpoint:** At this point, you can render `<QuestionnaireFormRenderer model={someModel} mode="preview" />` in a throwaway page and see the full form with disabled inputs.
 
 ---
 
@@ -1031,7 +1032,16 @@ In preview mode: no state, no `onChange`, no progress bar — just disabled inpu
 
 File: `app/(dashboard)/superadmin/questionnaires/preview/page.tsx`
 
-Change the import from the old `QuestionnairePreviewRenderer` to the new `QuestionnaireFormRenderer` from `features/questionnaires/components/form/questionnaire-form-renderer`, and use `mode="preview"`.
+Change:
+```typescript
+// Before:
+import { QuestionnairePreviewRenderer } from "@/features/questionnaires/components/builder/questionnaire-preview-renderer";
+<QuestionnairePreviewRenderer model={buildQuestionnairePreviewModel(draft)} backHref="..." backLabel="..." />
+
+// After:
+import { QuestionnaireFormRenderer } from "@/features/questionnaires/components/form/questionnaire-form-renderer";
+<QuestionnaireFormRenderer model={buildQuestionnairePreviewModel(draft)} mode="preview" />
+```
 
 The new renderer doesn't own back-navigation — the page keeps its own back button/link separately. The `backHref`/`backLabel` props that the old renderer accepted are handled by the page now.
 
@@ -1067,7 +1077,7 @@ Fetches the active published version for a given questionnaire type (e.g., `FACU
 
 **Step 4.3 — `use-submit-evaluation.ts`**
 
-`useMutation` wrapping `submitEvaluation`. `onSuccess`: toast + `router.push("/student/courses")`. `onError`: handle 409 (duplicate then toast + redirect), other errors then generic toast.
+`useMutation` wrapping `submitEvaluation`. `onSuccess`: toast + `router.push("/student/courses")`. `onError`: handle 409 (duplicate → toast + redirect), other errors → generic toast.
 
 **Step 4.4 — `use-check-submission.ts`**
 
@@ -1102,11 +1112,11 @@ File: `app/(dashboard)/student/courses/[courseId]/evaluation/page.tsx`
 The current page is a placeholder. Replace with the full orchestration flow:
 
 1. Resolve enrollment context (existing logic — `useSelectedCourseStore` + `useMyEnrollments` fallback)
-2. Guard: no faculty then render `EvaluationNoFaculty`
-3. Fetch active `FACULTY_FEEDBACK` version then deserialize then `buildQuestionnairePreviewModel`
-4. Check submission status (when FAC-63 ships) then if submitted, render `EvaluationAlreadySubmitted`
-5. Fetch draft (when FAC-62 ships) then hydrate as `defaultValues` if version matches
-6. Render `QuestionnaireFormRenderer` with `model={model}`, `mode="interactive"`, `defaultValues={draft}`, `onChange={handleChange}`
+2. Guard: no faculty → render `EvaluationNoFaculty`
+3. Fetch active `FACULTY_FEEDBACK` version → deserialize → `buildQuestionnairePreviewModel`
+4. Check submission status (when FAC-63 ships) → if submitted, render `EvaluationAlreadySubmitted`
+5. Fetch draft (when FAC-62 ships) → hydrate as `defaultValues` if version matches
+6. Render `<QuestionnaireFormRenderer model={model} mode="interactive" defaultValues={draft} onChange={handleChange} />`
 7. Wire submit button: collect values from `onChange`, call `useSubmitEvaluation` mutation
 8. Wire auto-save: pass `onChange` values to `useAutoSaveDraft`
 
@@ -1130,8 +1140,8 @@ Check if other routes import these before deleting.
 
 **Step 6.1 — Responsive testing**
 
-Test at mobile (below `md`) and desktop (`md` and above) breakpoints:
-- Matrix table to stacked pills transition
+Test at mobile (`< md`) and desktop (`≥ md`) breakpoints:
+- Matrix table → stacked pills transition
 - Nested sections render correctly at both sizes
 - YES_NO sections show 2 pills (not 5) on mobile
 
@@ -1143,10 +1153,10 @@ Test at mobile (below `md`) and desktop (`md` and above) breakpoints:
 
 **Step 6.3 — Edge case testing**
 
-- Course with no faculty then "No instructor assigned" state
-- Empty questionnaire (no sections) then handle gracefully
-- 409 on submit then toast + redirect
-- Version mismatch on draft then stale draft discarded, fresh form
+- Course with no faculty → "No instructor assigned" state
+- Empty questionnaire (no sections) → handle gracefully
+- 409 on submit → toast + redirect
+- Version mismatch on draft → stale draft discarded, fresh form
 
 **Step 6.4 — Type check and lint**
 
@@ -1160,19 +1170,19 @@ cd app.faculytics && bun run typecheck && bun run lint
 
 ```
 Phase 1 (types, progress, endpoints)
-  |
-  v
+  │
+  ▼
 Phase 2 (renderer components, bottom-up)
-  |
-  |---> Phase 3 (superadmin preview swap) -- can ship independently
-  |
-  v
+  │
+  ├──▶ Phase 3 (superadmin preview swap) ── can ship independently
+  │
+  ▼
 Phase 4 (API + hooks)
-  |
-  v
+  │
+  ▼
 Phase 5 (student evaluation page)
-  |
-  v
+  │
+  ▼
 Phase 6 (QA)
 ```
 

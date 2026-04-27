@@ -59,14 +59,14 @@ GET /reports/batch/:batchId
 
 ## Key Components
 
-| Component | Purpose |
-| --- | --- |
-| `ReportsService` | Orchestration — scope validation, dedup, entity lifecycle |
-| `ReportGenerationProcessor` | BullMQ processor — data fetch, PDF render, R2 upload |
-| `PdfService` | Puppeteer + Handlebars PDF generation with persistent browser |
-| `R2StorageService` | S3-compatible R2 storage with presigned URL generation |
-| `ReportCleanupJob` | Daily cron — purges expired reports and orphaned jobs |
-| `ReportJob` entity | Tracks job lifecycle, ownership, and storage key |
+| Component                   | Purpose                                                       |
+| --------------------------- | ------------------------------------------------------------- |
+| `ReportsService`            | Orchestration — scope validation, dedup, entity lifecycle     |
+| `ReportGenerationProcessor` | BullMQ processor — data fetch, PDF render, R2 upload          |
+| `PdfService`                | Puppeteer + Handlebars PDF generation with persistent browser |
+| `R2StorageService`          | S3-compatible R2 storage with presigned URL generation        |
+| `ReportCleanupJob`          | Daily cron — purges expired reports and orphaned jobs         |
+| `ReportJob` entity          | Tracks job lifecycle, ownership, and storage key              |
 
 ## Authorization
 
@@ -114,13 +114,13 @@ The `@OnWorkerEvent('failed')` handler only marks the entity as `'failed'` on th
 
 ## Environment Variables
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `CF_ACCOUNT_ID` | _(optional)_ | Cloudflare account ID for R2 |
-| `R2_ACCESS_KEY_ID` | _(optional)_ | R2 access key |
-| `R2_SECRET_ACCESS_KEY` | _(optional)_ | R2 secret key |
-| `R2_BUCKET_NAME` | `faculytics-reports` | R2 bucket name |
-| `REPORT_GENERATION_CONCURRENCY` | `2` | BullMQ processor concurrency |
-| `REPORT_PRESIGNED_URL_EXPIRY_SECONDS` | `3600` | Presigned URL lifetime |
-| `REPORT_BATCH_MAX_SIZE` | `100` | Max faculty per batch request |
-| `REPORT_RETENTION_DAYS` | `7` | Days before cleanup purges reports |
+| Variable                              | Default              | Purpose                            |
+| ------------------------------------- | -------------------- | ---------------------------------- |
+| `CF_ACCOUNT_ID`                       | _(optional)_         | Cloudflare account ID for R2       |
+| `R2_ACCESS_KEY_ID`                    | _(optional)_         | R2 access key                      |
+| `R2_SECRET_ACCESS_KEY`                | _(optional)_         | R2 secret key                      |
+| `R2_BUCKET_NAME`                      | `faculytics-reports` | R2 bucket name                     |
+| `REPORT_GENERATION_CONCURRENCY`       | `2`                  | BullMQ processor concurrency       |
+| `REPORT_PRESIGNED_URL_EXPIRY_SECONDS` | `3600`               | Presigned URL lifetime             |
+| `REPORT_BATCH_MAX_SIZE`               | `100`                | Max faculty per batch request      |
+| `REPORT_RETENTION_DAYS`               | `7`                  | Days before cleanup purges reports |

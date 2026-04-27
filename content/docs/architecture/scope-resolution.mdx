@@ -38,10 +38,10 @@ This means **`moodleCategoryId` is semester-specific** and cannot be used to loo
 
 Institutional roles are stored in `UserInstitutionalRole`, linking a user + role + `MoodleCategory`:
 
-| Role | Expected Depth | Source | Assigned At |
-| --- | --- | --- | --- |
-| DEAN | 3 (department) | `manual` | Admin endpoint |
-| CHAIRPERSON | 4 (program) | `auto` or `manual` | Moodle hydration or admin |
+| Role        | Expected Depth | Source             | Assigned At               |
+| ----------- | -------------- | ------------------ | ------------------------- |
+| DEAN        | 3 (department) | `manual`           | Admin endpoint            |
+| CHAIRPERSON | 4 (program)    | `auto` or `manual` | Moodle hydration or admin |
 
 ### DEAN Depth Auto-Resolution
 
@@ -88,22 +88,22 @@ flowchart TD
 
 Returns `string[] | null` — program UUIDs, or `null` for unrestricted.
 
-| Role | Behavior |
-| --- | --- |
-| SUPER_ADMIN | `null` (unrestricted) |
-| DEAN | `null` (sees all programs in their departments) |
+| Role        | Behavior                                                               |
+| ----------- | ---------------------------------------------------------------------- |
+| SUPER_ADMIN | `null` (unrestricted)                                                  |
+| DEAN        | `null` (sees all programs in their departments)                        |
 | CHAIRPERSON | Returns specific program UUIDs matching their institutional role codes |
 
 ### `ResolveProgramCodes(semesterId)`
 
 Returns `string[] | null` — program **codes** instead of UUIDs, for consumers that filter against snapshotted string columns rather than FK relations.
 
-| Role | Behavior |
-| --- | --- |
-| SUPER_ADMIN | `null` (unrestricted) |
-| DEAN | `null` (sees all programs in their departments) |
+| Role        | Behavior                                                            |
+| ----------- | ------------------------------------------------------------------- |
+| SUPER_ADMIN | `null` (unrestricted)                                               |
+| DEAN        | `null` (sees all programs in their departments)                     |
 | CHAIRPERSON | Returns program codes matching their institutional role assignments |
-| Other | `ForbiddenException` |
+| Other       | `ForbiddenException`                                                |
 
 Used by `AnalyticsService` to narrow queries against `mv_faculty_semester_stats.program_code_snapshot`. The chairperson branch shares a private `resolveChairpersonPrograms(userId, semesterId)` helper with `ResolveProgramIds` — category→program lookup logic is not duplicated.
 
@@ -111,12 +111,12 @@ Used by `AnalyticsService` to narrow queries against `mv_faculty_semester_stats.
 
 The following services call `ScopeResolverService`:
 
-| Service | Method | What It Scopes |
-| --- | --- | --- |
-| `FacultyService` | `ListFaculty` | Faculty list filtered by department |
-| `AnalyticsService` | `ResolveDepartmentCodes` | Analytics queries filtered by department |
-| `ReportsService` | Various | Report generation scoped to department |
-| `CurriculumService` | Various | Curriculum data scoped to department/program |
+| Service             | Method                   | What It Scopes                               |
+| ------------------- | ------------------------ | -------------------------------------------- |
+| `FacultyService`    | `ListFaculty`            | Faculty list filtered by department          |
+| `AnalyticsService`  | `ResolveDepartmentCodes` | Analytics queries filtered by department     |
+| `ReportsService`    | Various                  | Report generation scoped to department       |
+| `CurriculumService` | Various                  | Curriculum data scoped to department/program |
 
 ### How Consumers Use the Result
 
@@ -155,13 +155,25 @@ When a user holds multiple roles, the highest-priority role wins:
 2. `DEAN` — department-level scope
 3. `CHAIRPERSON` — program-level scope (narrower)
 
+### Pipeline-scope authorization
+
+Analysis-pipeline authorization (create/confirm/cancel/read) reuses `ResolveDepartmentIds`, `ResolveProgramIds`, and `ResolveCampusIds`. Pipeline-specific rules — required axis per role, list default-fill, FACULTY auto-override, 404-before-403 ordering, and the active-scope unique index — live in [analysis-pipeline.md §Access Control](/docs/workflows/analysis-pipeline#access-control). `PipelineOrchestratorService` calls these resolvers before any DB write or flush so a foreign caller cannot cause side effects.
+
+### Faculty self-view on analytics endpoints
+
+The faculty report endpoints (`/analytics/faculty/:facultyId/report`, `.../report/comments`, `.../qualitative-summary`, `.../questionnaire-types`) are the only analytics surfaces that admit the FACULTY role. The `AnalyticsController` declares its class-level allowlist as `(DEAN, CHAIRPERSON, CAMPUS_HEAD, SUPER_ADMIN)`; each faculty endpoint widens with a per-method `@UseJwtGuard(... , FACULTY)` and then calls `assertFacultySelfScope(currentUser, facultyId)`.
+
+`assertFacultySelfScope` (`src/modules/analytics/lib/faculty-scope.util.ts`) is a no-op for non-FACULTY roles and throws `ForbiddenException` if a FACULTY user requests a `facultyId` other than their own. Use the same helper on any future analytics surface that exposes per-faculty data to FACULTY users — equality of `user.id === facultyId` is the canonical ownership check (faculty users do not have a separate FacultyProfile entity).
+
+For pipeline read access, FACULTY ownership is checked via `pipeline.faculty.id === user.id` inside `PipelineOrchestratorService.assertCanAccessPipeline`; verbatim student text in the recommendations response is then redacted by `AnalysisAccessService.RedactIfFacultySelfView` regardless of which role-coincidence path admitted the request. See [Analytics — Faculty Self-View Redaction](/docs/architecture/analytics#faculty-self-view-redaction).
+
 ## Source Files
 
-| File | Purpose |
-| --- | --- |
-| `src/modules/common/services/scope-resolver.service.ts` | Core resolution logic |
-| `src/modules/common/services/scope-resolver.service.spec.ts` | Unit tests |
-| `src/modules/admin/services/admin.service.ts` | DEAN depth validation on assignment |
-| `src/entities/user-institutional-role.entity.ts` | Role ↔ MoodleCategory link |
-| `src/entities/moodle-category.entity.ts` | Hierarchy fields (depth, path, parentMoodleCategoryId) |
+| File                                                          | Purpose                                                      |
+| ------------------------------------------------------------- | ------------------------------------------------------------ |
+| `src/modules/common/services/scope-resolver.service.ts`       | Core resolution logic                                        |
+| `src/modules/common/services/scope-resolver.service.spec.ts`  | Unit tests                                                   |
+| `src/modules/admin/services/admin.service.ts`                 | DEAN depth validation on assignment                          |
+| `src/entities/user-institutional-role.entity.ts`              | Role ↔ MoodleCategory link                                   |
+| `src/entities/moodle-category.entity.ts`                      | Hierarchy fields (depth, path, parentMoodleCategoryId)       |
 | `src/modules/moodle/services/moodle-category-sync.service.ts` | Sets Department.code / Program.code from MoodleCategory.name |
